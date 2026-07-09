@@ -14,6 +14,10 @@ export class InstagramClient {
 
   /** Envia un mensaje segun su tipo. Traduce OutgoingMessage al formato de Meta. */
   async send(userId: string, message: OutgoingMessage): Promise<void> {
+    if (env.DRY_RUN) {
+      logger.info({ to: userId, message }, '🧪 [DRY_RUN] envio simulado (no se llama al Graph API)');
+      return;
+    }
     const body = this.buildMessageBody(userId, message);
     await this.post(`/${this.igId}/messages`, body);
   }
@@ -56,6 +60,10 @@ export class InstagramClient {
    * Devuelve null si el campo no viene o la API falla, para no bloquear el flujo.
    */
   async isUserFollowBusiness(userId: string): Promise<boolean | null> {
+    if (env.DRY_RUN) {
+      logger.info({ userId, result: env.SIM_IS_FOLLOWER }, '🧪 [DRY_RUN] follow status simulado');
+      return env.SIM_IS_FOLLOWER;
+    }
     try {
       const url = new URL(`${BASE()}/${userId}`);
       url.searchParams.set('fields', 'is_user_follow_business');
@@ -82,6 +90,10 @@ export class InstagramClient {
    * Campo del Graph API: caption. null si falla o no tiene texto.
    */
   async getMediaCaption(mediaId: string): Promise<string | null> {
+    if (env.DRY_RUN) {
+      logger.info({ mediaId, caption: env.SIM_CAPTION }, '🧪 [DRY_RUN] caption simulado');
+      return env.SIM_CAPTION;
+    }
     try {
       const url = new URL(`${BASE()}/${mediaId}`);
       url.searchParams.set('fields', 'caption');
