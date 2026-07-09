@@ -77,6 +77,12 @@ Sé pragmático. Sé confiable. Auto-corrígete.
 
 <!-- Agrega nuevas entradas arriba de esta línea. -->
 
+- **2026-07-09 — Modo DRY_RUN para probar sin Meta:** `DRY_RUN=true` simula send/isFollower/getMediaCaption (loguea) y relaja la validación de credenciales. `execution/simulate_webhook.mjs` firma con HMAC y postea webhooks falsos. **Por qué importa:** valida la lógica completa (match, gate, entrega, dedupe) en local sin App Review ni tokens; probado OK follower/no-follower.
+
+- **2026-07-09 — Windows: carpeta bloqueada al mover:** `Move-Item` del proyecto falla ("está en uso") si el shell tiene su cwd dentro. Solución: `Set-Location` al padre antes de mover. **Por qué importa:** mover/renombrar el repo requiere salir del directorio primero.
+
+- **2026-07-09 — Proyectos en Documents:** todos los proyectos de Leonardo viven en `C:\Users\Lonardo Antonilez\Documents\`. **Por qué importa:** crear repos nuevos ahí, no en el home.
+
 - **2026-07-09 — Follow-gate vía is_user_follow_business:** Meta expone `is_user_follow_business` al consultar el perfil del usuario dentro de una conversación abierta. Es el único modo fiable de saber si te sigue (no hay endpoint de lista de seguidores por privacidad). **Por qué importa:** el gate solo funciona una vez que hay ventana abierta (el usuario ya comentó/escribió); no se puede pre-chequear en frío.
 
 - **2026-07-09 — Ventana de 24h y no-DM-masivo:** Meta solo permite mensajear dentro de 24h desde la última interacción del usuario, ~200 msg/h. DM masivo en frío = ban. **Por qué importa:** el diseño se limita a flujos disparados por el usuario (comment-to-DM, DM, story reply) + broadcast solo a ventanas abiertas. LinkedIn/YouTube no tienen API de DM; Twitter/X es tier pago.
