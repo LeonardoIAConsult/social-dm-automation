@@ -1,0 +1,30 @@
+{
+  "name": "social-dm-automation",
+  "version": "0.1.0",
+  "description": "Motor de automatizacion de DMs para redes sociales. Conecta directo a la API de Meta (Instagram) sin intermediarios. Flujos disparados por el usuario (comment-to-DM, DM entrante, story reply) con follow-gate para entregar valor solo a quienes te siguen. Arquitectura de adaptadores extensible a Facebook y otras redes.",
+  "type": "module",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test --import tsx ./tests/*.test.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "pino": "^9.3.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.10",
+    "pino-pretty": "^11.2.1",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.3"
+  },
+  "license": "MIT"
+}
