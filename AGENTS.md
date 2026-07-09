@@ -77,6 +77,10 @@ Sé pragmático. Sé confiable. Auto-corrígete.
 
 <!-- Agrega nuevas entradas arriba de esta línea. -->
 
+- **2026-07-09 — Entrega Drive por fecha del post:** Service Account + carpeta con nombre que contiene `YYYY-MM-DD` + link compartible en el DM. El `mediaId` se guarda en el estado para resolver la fecha aunque el usuario llegue por el postback "ya te sigo". Probado end-to-end en dry-run. **Por qué importa:** el creador solo organiza Drive por fecha; el sistema entrega el PDF correcto sin mapear nada por post.
+
+- **2026-07-09 — Conflicto de tipos google-auth-library:** `@googleapis/drive` trae su propia copia anidada de `google-auth-library`; pasar el `GoogleAuth` del paquete top-level rompe el tipo (`#private`). Fix: cast `auth as unknown as never` (misma clase en runtime). **Por qué importa:** evita romper el typecheck sin degradar funcionalidad; no perder tiempo buscando otra causa.
+
 - **2026-07-09 — Modo DRY_RUN para probar sin Meta:** `DRY_RUN=true` simula send/isFollower/getMediaCaption (loguea) y relaja la validación de credenciales. `execution/simulate_webhook.mjs` firma con HMAC y postea webhooks falsos. **Por qué importa:** valida la lógica completa (match, gate, entrega, dedupe) en local sin App Review ni tokens; probado OK follower/no-follower.
 
 - **2026-07-09 — Windows: carpeta bloqueada al mover:** `Move-Item` del proyecto falla ("está en uso") si el shell tiene su cwd dentro. Solución: `Set-Location` al padre antes de mover. **Por qué importa:** mover/renombrar el repo requiere salir del directorio primero.

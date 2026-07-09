@@ -7,6 +7,7 @@ import {
 } from '../store/conversationStore.js';
 import { captionCampaigns, getCampaign, matchCampaign, type Campaign } from './campaigns.js';
 import { extractKeywordFromCaption } from './keywordExtractor.js';
+import { googleDrive, toDateFolderName } from '../integrations/googleDrive.js';
 import type { IncomingEvent, PlatformAdapter } from './types.js';
 
 /** Prefijo del payload que reintenta el gate tras "ya te sigo". */
@@ -39,6 +40,9 @@ export class FlowEngine {
     const state = await this.loadState(event);
     // La llegada de cualquier evento del usuario renueva la ventana de 24h.
     state.lastUserInteractionAt = event.timestamp || Date.now();
+    // Recuerda el post de origen: la entrega por Drive lo necesita aunque el
+    // usuario llegue luego por el boton "ya te sigo" (postback sin mediaId).
+    if (event.mediaId) state.data.mediaId = event.mediaId;
 
     try {
       if (event.type === 'postback' && event.payload?.startsWith(CHECK_PREFIX)) {
@@ -154,9 +158,43 @@ export class FlowEngine {
     for (const msg of campaign.deliver) {
       await this.safeSend(adapter, state, msg);
     }
+    await this.deliverFromDrive(adapter, state, campaign);
     state.data[flagKey] = true;
     state.step = 'delivered';
     logger.info({ user: state.userId, campaign: campaign.name }, 'Valor entregado ✅');
+  }
+
+  /** Entrega el documento de Drive resuelto por la fecha del post de origen. */
+  private async deliverFromDrive(
+    adapter: PlatformAdapter,
+    state: ConversationState,
+    campaign: Campaign,
+  ): Promise<void> {
+    if (!campaign.driveDelivery?.enabled) return;
+
+    const mediaId = typeof state.data.mediaId === 'string' ? state.data.mediaId : undefined;
+    if (!mediaId || !adapter.getMediaTimestamp) {
+      logger.warn({ user: state.userId }, 'Drive: sin mediaId/timestamp; se omite entrega Drive');
+      return;
+    }
+
+    const ts = await adapter.getMediaTimestamp(mediaId);
+    if (ts === null) {
+      logger.warn({ mediaId }, 'Drive: no se pudo obtener la fecha del post');
+      return;
+    }
+
+    const date = toDateFolderName(ts);
+    const link = await googleDrive.resolveLinkByDate(date);
+    if (!link) {
+      logger.warn({ date }, 'Drive: sin documento para esa fecha; se omite');
+      return;
+    }
+
+    if (campaign.driveDelivery.prependText) {
+      await this.safeSend(adapter, state, { kind: 'text', text: campaign.driveDelivery.prependText });
+    }
+    await this.safeSend(adapter, state, { kind: 'text', text: link });
   }
 
   /** Consulta follow status con cache corto. */

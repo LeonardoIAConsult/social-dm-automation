@@ -111,6 +111,32 @@ export class InstagramClient {
     }
   }
 
+  /** Epoch ms de publicacion del media (campo timestamp del Graph API). */
+  async getMediaTimestamp(mediaId: string): Promise<number | null> {
+    if (env.DRY_RUN) {
+      const iso = env.SIM_MEDIA_TIMESTAMP || new Date().toISOString();
+      const ms = Date.parse(iso);
+      logger.info({ mediaId, iso }, '🧪 [DRY_RUN] timestamp de media simulado');
+      return Number.isNaN(ms) ? Date.now() : ms;
+    }
+    try {
+      const url = new URL(`${BASE()}/${mediaId}`);
+      url.searchParams.set('fields', 'timestamp');
+      url.searchParams.set('access_token', this.token);
+      const res = await fetch(url, { method: 'GET' });
+      const json = (await res.json()) as { timestamp?: string; error?: unknown };
+      if (!res.ok || json.error || !json.timestamp) {
+        logger.warn({ status: res.status, error: json.error }, 'getMediaTimestamp fallo');
+        return null;
+      }
+      const ms = Date.parse(json.timestamp);
+      return Number.isNaN(ms) ? null : ms;
+    } catch (err) {
+      logger.error({ err }, 'Error obteniendo timestamp de media');
+      return null;
+    }
+  }
+
   private async post(path: string, body: Record<string, unknown>): Promise<void> {
     const url = `${BASE()}${path}?access_token=${encodeURIComponent(this.token)}`;
     const res = await fetch(url, {

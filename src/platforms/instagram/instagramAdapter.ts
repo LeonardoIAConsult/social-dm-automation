@@ -37,4 +37,8 @@ export class InstagramAdapter implements PlatformAdapter {
   async getMediaCaption(mediaId: string): Promise<string | null> {
     return this.client.getMediaCaption(mediaId);
   }
+
+  async getMediaTimestamp(mediaId: string): Promise<number | null> {
+    return this.client.getMediaTimestamp(mediaId);
+  }
 }

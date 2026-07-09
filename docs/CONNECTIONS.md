@@ -13,10 +13,16 @@ Qué falta que hagas TÚ (no lo puedo hacer por ti, requiere tu login):
 
 Detalle paso a paso: `docs/SETUP_META.md`. Prueba local sin nada de esto: `DRY_RUN=true` + `execution/simulate_webhook.mjs`.
 
-## 2. Google Drive (PDFs por fecha/post)  🔧 (pendiente de decisiones — ver abajo)
-Objetivo: entregar en el DM el documento correcto sacándolo de una carpeta de Drive
-marcada por fecha/post. Requiere credenciales de Google. Decisiones pendientes antes de
-construir (método de auth, convención de carpetas, link vs adjunto). Ver sección al final.
+## 2. Google Drive (PDFs por fecha/post)  🔧 (código ✅, faltan tus credenciales)
+Decidido: **Service Account** + selección **automática por fecha del post** + entrega como
+**link de Drive** en el DM. Código listo y probado en dry-run. Qué falta que hagas TÚ:
+1. Google Cloud → proyecto → habilita **Google Drive API**.
+2. Crea **cuenta de servicio** → clave JSON → guárdala como `credentials.json` (git-ignored).
+3. **Comparte** tu carpeta raíz de Drive con el email de la cuenta de servicio (lector).
+4. Estructura Drive: subcarpeta por post cuyo nombre **contenga la fecha `YYYY-MM-DD`**; dentro el PDF.
+5. En `.env`: `GDRIVE_ENABLED=true`, `GDRIVE_ROOT_FOLDER_ID=<id carpeta raíz>`.
+
+Paso a paso: `directives/drive_delivery.md`. Prueba sin credenciales: `DRY_RUN=true`.
 
 ## 3. Facebook Messenger  🕓
 Comparte casi toda la API de Meta. Se agrega como segundo adaptador reusando el de IG.

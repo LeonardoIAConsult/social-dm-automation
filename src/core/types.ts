@@ -82,4 +82,10 @@ export interface PlatformAdapter {
    * Opcional: no todas las plataformas lo exponen. null si no se pudo obtener.
    */
   getMediaCaption?(mediaId: string): Promise<string | null>;
+
+  /**
+   * Epoch ms de publicacion de un post/reel. Se usa para resolver el documento
+   * de Drive por la fecha del post. null si no se pudo obtener.
+   */
+  getMediaTimestamp?(mediaId: string): Promise<number | null>;
 }

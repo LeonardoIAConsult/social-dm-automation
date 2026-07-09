@@ -49,6 +49,18 @@ export interface Campaign {
 
   /** Lo que se entrega cuando el gate pasa (link, PDF, texto, etc.). */
   deliver: OutgoingMessage[];
+
+  /**
+   * Entrega adicional desde Google Drive, resuelta por la FECHA del post donde
+   * comentaron: manda el link del documento de la carpeta con esa fecha.
+   * Requiere GDRIVE_ENABLED y un evento con mediaId (comentario). Ver
+   * directives/drive_delivery.md.
+   */
+  driveDelivery?: {
+    enabled: boolean;
+    /** Texto opcional que precede al link del documento. */
+    prependText?: string;
+  };
 }
 
 /**
@@ -99,10 +111,12 @@ export const campaigns: Campaign[] = [
       stillNotFollowing:
         'Aún no veo que me sigas 🤔. Dale seguir y vuelve a tocar el botón.',
     },
-    deliver: [
-      { kind: 'text', text: '¡Listo! Aquí tienes lo prometido 🎁' },
-      { kind: 'text', text: 'https://tu-dominio.com/recurso' },
-    ],
+    // El documento se resuelve desde Drive por la fecha del post (no link fijo).
+    deliver: [],
+    driveDelivery: {
+      enabled: true,
+      prependText: '¡Listo! Aquí tienes el material del post 🎁',
+    },
   },
 ];
 

@@ -27,6 +27,17 @@ const base = z.object({
   // En DRY_RUN estos valores simulan la respuesta del Graph API.
   SIM_IS_FOLLOWER: bool('true'),
   SIM_CAPTION: z.string().default('Comenta "GUIA" y te la mando 🎁'),
+  SIM_MEDIA_TIMESTAMP: z.string().default(''), // ISO; vacio = ahora
+  SIM_DRIVE_LINK: z.string().default('https://drive.google.com/file/d/DEMO/view'),
+
+  // ── Google Drive (entrega de PDFs por fecha del post) ──
+  GDRIVE_ENABLED: bool('false'),
+  // Carpeta raiz que contiene las subcarpetas con fecha (una por post/fecha).
+  GDRIVE_ROOT_FOLDER_ID: z.string().default(''),
+  // Ruta al JSON de la cuenta de servicio de Google Cloud.
+  GOOGLE_APPLICATION_CREDENTIALS: z.string().default('credentials.json'),
+  // Formato de fecha esperado en el nombre de la subcarpeta (solo referencia).
+  GDRIVE_DATE_FORMAT: z.string().default('YYYY-MM-DD'),
 
   // Credenciales Meta. En DRY_RUN pueden quedar vacias (se validan solo en real).
   META_WEBHOOK_VERIFY_TOKEN: z.string().default('dev-verify-token'),

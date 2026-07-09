@@ -13,6 +13,8 @@ Arquitectura de **adaptadores** → hoy Instagram; extensible a Facebook y otras
 - Aplica el **follow-gate** con el campo oficial `is_user_follow_business`.
 - Si la persona te sigue → entrega el valor. Si no → le pide seguirte y reintenta con un botón.
 - Respeta la ventana de 24h y evita reenvíos duplicados.
+- **Entrega desde Google Drive por fecha del post**: manda el PDF de la carpeta de Drive marcada con la fecha del post donde comentaron (Service Account + link compartible).
+- **Modo DRY_RUN** para probar todo el flujo local sin credenciales (ver más abajo).
 
 ## Qué NO hace (a propósito)
 - DM masivo en frío a desconocidos (prohibido por Meta).
@@ -30,6 +32,16 @@ npm test                  # tests del parser y matcher
 npm run typecheck         # chequeo de tipos
 ```
 Expón el puerto con `ngrok http 3000` y usa esa URL https como Callback URL del webhook en el panel de Meta.
+
+## Probar sin credenciales (DRY_RUN)
+Con `DRY_RUN=true` en `.env`, el server simula el Graph API y Drive (loguea en vez de llamar).
+Arranca `npm run dev` y en otra terminal dispara webhooks falsos:
+```bash
+node execution/simulate_webhook.mjs comment "quiero la GUIA"     # comment-to-DM
+node execution/simulate_webhook.mjs message "GUIA"               # DM directo
+node execution/simulate_webhook.mjs follow-check freebie-guia    # botón "ya te sigo"
+```
+Verás en los logs del server el flujo completo: match → follow-gate → entrega (incl. link de Drive).
 
 ## Definir tus campañas
 Edita [`src/core/campaigns.ts`](src/core/campaigns.ts). Es lo único que la mayoría necesita tocar: palabra clave, si exige seguir, textos y el contenido a entregar.
