@@ -5,7 +5,8 @@ import {
   type ConversationState,
   type ConversationStore,
 } from '../store/conversationStore.js';
-import { getCampaign, matchCampaign, type Campaign } from './campaigns.js';
+import { captionCampaigns, getCampaign, matchCampaign, type Campaign } from './campaigns.js';
+import { extractKeywordFromCaption } from './keywordExtractor.js';
 import type { IncomingEvent, PlatformAdapter } from './types.js';
 
 /** Prefijo del payload que reintenta el gate tras "ya te sigo". */
@@ -20,6 +21,9 @@ const FOLLOW_CACHE_TTL_MS = 60 * 1000;
  * No sabe nada de Instagram; usa el PlatformAdapter.
  */
 export class FlowEngine {
+  /** Cache de keyword derivada por media, para no pedir el caption en cada comentario. */
+  private readonly captionKeywordCache = new Map<string, string | null>();
+
   constructor(
     private readonly store: ConversationStore,
     private readonly adapters: Map<string, PlatformAdapter>,
@@ -44,7 +48,7 @@ export class FlowEngine {
         return;
       }
 
-      const campaign = matchCampaign(event.type, event.text, event.mediaId);
+      const campaign = await this.resolveCampaign(adapter, event);
       if (!campaign) {
         logger.debug({ type: event.type, text: event.text }, 'Sin campana que haga match');
         return;
@@ -67,6 +71,45 @@ export class FlowEngine {
     } finally {
       await this.store.upsert(state);
     }
+  }
+
+  /**
+   * Decide que campana aplica al evento.
+   * 1) Campanas en modo 'keywords' (match directo por texto).
+   * 2) Campanas en modo 'caption': deriva la keyword del copy del post en runtime
+   *    y dispara si el comentario la contiene.
+   */
+  private async resolveCampaign(
+    adapter: PlatformAdapter,
+    event: IncomingEvent,
+  ): Promise<Campaign | undefined> {
+    const direct = matchCampaign(event.type, event.text, event.mediaId);
+    if (direct) return direct;
+
+    if (event.type !== 'comment' || !event.mediaId || !event.text) return undefined;
+    const candidates = captionCampaigns(event.type, event.mediaId);
+    if (candidates.length === 0) return undefined;
+
+    const keyword = await this.resolveCaptionKeyword(adapter, event.mediaId);
+    if (!keyword) return undefined;
+    if (!event.text.toUpperCase().includes(keyword)) return undefined;
+
+    logger.info({ mediaId: event.mediaId, keyword }, 'Keyword derivada del copy del post');
+    return candidates[0];
+  }
+
+  /** Obtiene (con cache) la keyword derivada del caption de un media. */
+  private async resolveCaptionKeyword(
+    adapter: PlatformAdapter,
+    mediaId: string,
+  ): Promise<string | null> {
+    if (this.captionKeywordCache.has(mediaId)) {
+      return this.captionKeywordCache.get(mediaId) ?? null;
+    }
+    const caption = adapter.getMediaCaption ? await adapter.getMediaCaption(mediaId) : null;
+    const keyword = extractKeywordFromCaption(caption);
+    this.captionKeywordCache.set(mediaId, keyword);
+    return keyword;
   }
 
   /** Corazon del follow-gate: entrega si pasa, si no pide seguir. */

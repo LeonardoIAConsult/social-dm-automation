@@ -13,7 +13,16 @@ export interface Campaign {
 
   /** Como se dispara. */
   trigger: {
-    /** Palabras clave (case-insensitive, match por inclusion). Vacio = cualquiera. */
+    /**
+     * Modo de la keyword:
+     *  - 'keywords': usas la lista `keywords` de abajo (control manual).
+     *  - 'caption' : el sistema deriva la keyword del copy del post/story en
+     *                tiempo real (ver keywordExtractor). No hace falta registrar
+     *                nada por post; funciona en cualquier publicacion.
+     * Default: 'keywords'.
+     */
+    mode?: 'keywords' | 'caption';
+    /** Palabras clave (case-insensitive, match por inclusion). Solo en modo 'keywords'. */
     keywords: string[];
     /** Tipos de evento que la activan. */
     eventTypes: IncomingEventType[];
@@ -69,9 +78,39 @@ export const campaigns: Campaign[] = [
       { kind: 'text', text: 'https://tu-dominio.com/guia.pdf' },
     ],
   },
+
+  // Campana auto-copy: NO registras keyword por post. El sistema lee el caption
+  // del reel/carrusel donde comentaron (ej. «Comenta "PLANTILLA" y te la mando»)
+  // y dispara si el comentario contiene esa palabra derivada del copy.
+  {
+    name: 'auto-copy',
+    trigger: {
+      mode: 'caption',
+      keywords: [], // se ignoran en modo caption; se derivan del post
+      eventTypes: ['comment'],
+    },
+    requireFollow: true,
+    copy: {
+      publicReply: '¡Te lo mando por DM! 📩',
+      welcome: '¡Hola! Ya vi tu comentario 🙌',
+      askToFollow:
+        'Para enviártelo solo necesito que me sigas. Cuando ya me sigas, toca el botón 👇',
+      followedButtonTitle: 'Ya te sigo ✅',
+      stillNotFollowing:
+        'Aún no veo que me sigas 🤔. Dale seguir y vuelve a tocar el botón.',
+    },
+    deliver: [
+      { kind: 'text', text: '¡Listo! Aquí tienes lo prometido 🎁' },
+      { kind: 'text', text: 'https://tu-dominio.com/recurso' },
+    ],
+  },
 ];
 
-/** Devuelve la campana que hace match con el texto del evento, o undefined. */
+/**
+ * Devuelve la campana en modo 'keywords' que hace match con el texto, o undefined.
+ * Las campanas en modo 'caption' NO se resuelven aqui (necesitan el caption del
+ * post en runtime); las maneja el FlowEngine.
+ */
 export function matchCampaign(
   eventType: IncomingEventType,
   text: string | undefined,
@@ -79,10 +118,24 @@ export function matchCampaign(
 ): Campaign | undefined {
   const haystack = (text ?? '').toUpperCase();
   return campaigns.find((c) => {
+    if ((c.trigger.mode ?? 'keywords') === 'caption') return false;
     if (!c.trigger.eventTypes.includes(eventType)) return false;
     if (c.trigger.mediaId && c.trigger.mediaId !== mediaId) return false;
     if (c.trigger.keywords.length === 0) return true;
     return c.trigger.keywords.some((k) => haystack.includes(k.toUpperCase()));
+  });
+}
+
+/** Campanas en modo 'caption' aplicables a un tipo de evento. */
+export function captionCampaigns(
+  eventType: IncomingEventType,
+  mediaId: string | undefined,
+): Campaign[] {
+  return campaigns.filter((c) => {
+    if (c.trigger.mode !== 'caption') return false;
+    if (!c.trigger.eventTypes.includes(eventType)) return false;
+    if (c.trigger.mediaId && c.trigger.mediaId !== mediaId) return false;
+    return true;
   });
 }
 

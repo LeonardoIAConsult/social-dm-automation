@@ -76,4 +76,10 @@ export interface PlatformAdapter {
    * Devuelve null si la plataforma no puede determinarlo.
    */
   isFollower(userId: string): Promise<boolean | null>;
+
+  /**
+   * Devuelve el texto (caption) de un post/reel para derivar keywords del copy.
+   * Opcional: no todas las plataformas lo exponen. null si no se pudo obtener.
+   */
+  getMediaCaption?(mediaId: string): Promise<string | null>;
 }

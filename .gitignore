@@ -8,3 +8,11 @@ dist/
 coverage/
 data/*.json
 !data/.gitkeep
+
+# Intermedios: nunca al repo, siempre regenerables
+.tmp/*
+!.tmp/.gitkeep
+
+# Credenciales OAuth (solo si un flujo las usa)
+credentials.json
+token.json

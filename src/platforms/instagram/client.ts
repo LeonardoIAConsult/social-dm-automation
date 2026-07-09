@@ -77,6 +77,28 @@ export class InstagramClient {
     }
   }
 
+  /**
+   * Obtiene el caption (copy) de un post/reel por su media id.
+   * Campo del Graph API: caption. null si falla o no tiene texto.
+   */
+  async getMediaCaption(mediaId: string): Promise<string | null> {
+    try {
+      const url = new URL(`${BASE()}/${mediaId}`);
+      url.searchParams.set('fields', 'caption');
+      url.searchParams.set('access_token', this.token);
+      const res = await fetch(url, { method: 'GET' });
+      const json = (await res.json()) as { caption?: string; error?: unknown };
+      if (!res.ok || json.error) {
+        logger.warn({ status: res.status, error: json.error }, 'getMediaCaption fallo');
+        return null;
+      }
+      return json.caption ?? null;
+    } catch (err) {
+      logger.error({ err }, 'Error obteniendo caption');
+      return null;
+    }
+  }
+
   private async post(path: string, body: Record<string, unknown>): Promise<void> {
     const url = `${BASE()}${path}?access_token=${encodeURIComponent(this.token)}`;
     const res = await fetch(url, {

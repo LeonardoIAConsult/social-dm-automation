@@ -33,4 +33,8 @@ export class InstagramAdapter implements PlatformAdapter {
   async isFollower(userId: string): Promise<boolean | null> {
     return this.client.isUserFollowBusiness(userId);
   }
+
+  async getMediaCaption(mediaId: string): Promise<string | null> {
+    return this.client.getMediaCaption(mediaId);
+  }
 }

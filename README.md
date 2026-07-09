@@ -34,7 +34,17 @@ Expón el puerto con `ngrok http 3000` y usa esa URL https como Callback URL del
 ## Definir tus campañas
 Edita [`src/core/campaigns.ts`](src/core/campaigns.ts). Es lo único que la mayoría necesita tocar: palabra clave, si exige seguir, textos y el contenido a entregar.
 
+Dos modos de disparo:
+- **`keywords`** — tú fijas las palabras clave.
+- **`caption`** — el sistema **deriva la keyword del copy del post/carrusel/story** en tiempo real (ej. publicas «Comenta "PLANTILLA" y te la mando» → dispara solo, sin registrar nada por post). Ver [`directives/caption_driven_keywords.md`](directives/caption_driven_keywords.md).
+
+## Marco de operación (3 capas + aprendizajes)
+El repo sigue una arquitectura de 3 capas (Directiva → Orquestación → Ejecución) con un
+registro de aprendizajes que se actualiza en cada ciclo. Ver [`AGENTS.md`](AGENTS.md) y [`directives/`](directives/).
+
 ## Documentación
+- [`AGENTS.md`](AGENTS.md) — manual de operación del agente + registro de aprendizajes.
+- [`directives/`](directives/) — SOPs (crear campaña, keyword desde el copy).
 - [`docs/SETUP_META.md`](docs/SETUP_META.md) — crear la app Meta, permisos, App Review, webhook.
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — cómo está armado y cómo sumar otra red.
 - [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) — reglas de Meta que el sistema respeta.
