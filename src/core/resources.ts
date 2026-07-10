@@ -1,6 +1,7 @@
 import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 import { normalize, matchesKeyword } from './textMatch.js';
+import { extractKeywordFromCaption } from './keywordExtractor.js';
 
 /**
  * Recursos a entregar por palabra clave.
@@ -70,27 +71,54 @@ async function loadMap(): Promise<Record<string, ResourceItem>> {
   }
 }
 
-/** Convierte el CSV de la hoja en el mapa normalizado palabra -> recurso. */
+/**
+ * Convierte el CSV de la hoja en el mapa palabra -> recurso.
+ *
+ * Soporta dos esquemas:
+ *  A) Hoja simple:      columnas palabra | link | mensaje.
+ *  B) Hoja de planeacion: columna CTA (ej. "Comenta AUTOMATIZA -> DM") de donde
+ *     se EXTRAE la palabra, y una columna de link (Link_Asset_Drive / link).
+ * Asi puedes usar tu misma hoja de contenido sin columnas extra.
+ */
 function parseSheet(csv: string): Record<string, ResourceItem> {
   const rows = parseCsv(csv);
   if (rows.length < 2) return {};
 
   const header = rows[0]!.map((h) => normalize(h));
-  const idx = (names: string[]) => header.findIndex((h) => names.includes(h));
-  let kw = idx(['palabra', 'keyword', 'clave', 'palabra clave']);
-  let url = idx(['link', 'url', 'enlace']);
-  let txt = idx(['mensaje', 'message', 'texto', 'text']);
-  // Si no hay encabezados reconocibles, asume orden palabra, link, mensaje.
-  if (kw === -1) kw = 0;
-  if (url === -1) url = 1;
+  const findExact = (names: string[]) => header.findIndex((h) => names.includes(h));
+  const findIncludes = (needle: string, exclude?: string) =>
+    header.findIndex((h) => h.includes(needle) && (!exclude || !h.includes(exclude)));
+
+  // Columna de palabra: limpia ('palabra'...) o CTA (frase de la que se extrae).
+  const cleanKw = findExact(['palabra', 'keyword', 'clave', 'palabra clave']);
+  const ctaKw = cleanKw === -1 ? findIncludes('cta') : -1;
+  const kwCol = cleanKw !== -1 ? cleanKw : ctaKw;
+  const kwIsPhrase = cleanKw === -1; // si viene de CTA, hay que extraer la palabra
+
+  // Columna de link: prioriza asset/drive; si no, link/url/enlace (no "publicado").
+  let urlCol = findIncludes('asset');
+  if (urlCol === -1) urlCol = findIncludes('drive');
+  if (urlCol === -1) urlCol = header.findIndex((h) => ['link', 'url', 'enlace'].includes(h));
+  if (urlCol === -1) urlCol = findIncludes('link', 'publicado');
+
+  const txtCol = findExact(['mensaje', 'message', 'texto', 'text']);
+
+  // Respaldo: si no se reconoce nada, asume orden palabra, link, mensaje.
+  const kw = kwCol !== -1 ? kwCol : 0;
+  const url = urlCol !== -1 ? urlCol : 1;
 
   const map: Record<string, ResourceItem> = {};
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i]!;
-    const key = normalize(row[kw] ?? '');
+    const rawKw = (row[kw] ?? '').trim();
     const link = (row[url] ?? '').trim();
-    if (!key || !link) continue;
-    const message = txt >= 0 ? (row[txt] ?? '').trim() : '';
+    if (!rawKw || !link || !/^https?:\/\//i.test(link)) continue;
+
+    const keyword = kwIsPhrase ? extractKeywordFromCaption(rawKw) : rawKw;
+    const key = normalize(keyword ?? '');
+    if (!key) continue;
+
+    const message = txtCol >= 0 ? (row[txtCol] ?? '').trim() : '';
     map[key] = { url: link, ...(message ? { text: message } : {}) };
   }
   return map;
