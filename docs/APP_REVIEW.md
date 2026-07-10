@@ -1,60 +1,84 @@
-# App Review de Meta — para responder a CUALQUIER persona
+# App Review — PAQUETE COMPLETO (haz esto de corrido)
 
-Hoy la app tiene **Acceso Estándar**: solo mensajea a cuentas que son **tester**.
-Para atender al público general necesitas **Acceso Avanzado**, que se obtiene enviando
-la app a **App Review**. Esta guía tiene todo listo para que lo envíes.
+Objetivo: pasar de Acceso Estándar (solo testers) a **Acceso Avanzado** para responder a
+CUALQUIER persona. Meta revisa; tú envías. Aquí está TODO listo para copiar/pegar, sin idas y vueltas.
 
-## 1. Permisos a solicitar (Advanced Access)
-En el panel: **App Review → Permissions and Features**. Pide Advanced Access de:
+> Qué NO puede hacer Claude: iniciar sesión en tu cuenta Meta, verificar tu negocio,
+> grabar el video, ni enviar el formulario. Eso es tuyo (identidad). El resto ya está armado.
 
-| Permiso | Para qué |
-|---|---|
-| `instagram_business_basic` | Info básica de la cuenta. |
-| `instagram_business_manage_messages` | Enviar/recibir DMs (el core del sistema). |
-| `instagram_business_manage_comments` | Recibir comentarios y responder (comment-to-DM). |
+---
 
-## 2. Requisitos previos (revisa antes de enviar)
-- App en modo **Activo** (ya está). ✅
-- **URL de política de privacidad** válida y pública (ya: `.../privacy`). ✅
-- Ícono de la app, categoría y datos básicos completos (Configuración → Información básica).
-- Posible **verificación de negocio** (Business Verification) en Meta Business Suite:
-  suele pedir documento del negocio. Puede tardar días.
+## PASO 0 — Prerrequisitos (si falta algo, esto bloquea el envío)
+1. **Configuración de la app → Información básica**: ícono de la app, categoría, y
+   **URL de política de privacidad** = `https://social-dm-automation.onrender.com/privacy` (ya la tienes).
+2. **Verificación del negocio** (la más lenta, empieza YA): Meta Business Suite →
+   Configuración del negocio → **Centro de seguridad** → **Verificación del negocio** →
+   sube los datos/documento de tu empresa. Puede tardar días. Sin esto no aprueban mensajería.
+3. Deja un **post público de prueba** cuyo copy diga: *"Comenta AUTOMATIZA y te lo envío por DM"*.
+   Copia su URL — la necesitas abajo. (Ese post debe tener la palabra en la hoja/CTA.)
 
-## 3. Descripción del caso de uso (pégala en el formulario)
-> Nuestra app automatiza la atención de una cuenta profesional de Instagram. Cuando un
-> usuario comenta una palabra clave en una publicación (indicada en el copy del post),
-> la app le envía un mensaje directo con un botón para recibir un recurso gratuito
-> (guía, plantilla, enlace). Al tocar el botón, la app verifica que el usuario siga la
-> cuenta y le entrega el recurso. Todo ocurre dentro de las ventanas de mensajería
-> permitidas por Meta; no se envían mensajes no solicitados ni masivos en frío.
+---
 
-## 4. Instrucciones paso a paso para el revisor (pégalas)
-> 1. Comenta la palabra "GUIA" en el post de prueba: <URL del post>.
-> 2. Recibirás un DM de la cuenta con un botón "Obtener el enlace".
-> 3. Toca el botón. Si sigues la cuenta, recibirás el enlace al recurso.
-> 4. Si no sigues, la app te pide seguir y reintentar con un botón.
+## PASO 1 — Agrega los 2 permisos a la solicitud
+En **Revisión de la app → Permisos y funciones**, clic en **"Solicitar acceso avanzado"** en:
+- `instagram_business_manage_messages`
+- `instagram_business_manage_comments`
 
-(Deja un post de prueba público con la palabra clave en el copy y pon su URL arriba.)
+Luego ve a **Revisión de la app → Solicitudes** → botón **Siguiente**.
 
-## 5. Screencast (video obligatorio)
-Graba una pantalla mostrando el flujo COMPLETO con una cuenta que NO sea admin:
-1. El post con el copy que dice "comenta GUIA".
-2. La otra cuenta comentando "GUIA".
-3. La llegada del DM con el botón.
-4. El tap y la entrega del enlace.
-5. Muestra brevemente el panel donde el permiso se usa.
-Sube el video en el formulario de cada permiso. Debe verse el uso REAL, sin cortes.
+---
 
-## 6. Checklist antes de enviar
-- [ ] App en modo Activo.
-- [ ] Política de privacidad accesible (`.../privacy`).
-- [ ] Datos básicos + ícono + categoría completos.
-- [ ] Business Verification iniciada/aprobada (si la piden).
-- [ ] Post de prueba público con la palabra clave en el copy.
-- [ ] Screencast del flujo completo grabado.
-- [ ] Descripción y pasos (secciones 3 y 4) pegados en cada permiso.
-- [ ] Enviar y esperar (revisión suele tardar días).
+## PASO 2 — Rellena cada permiso (copia/pega estos textos)
 
-## Mientras tanto
-Puedes seguir probando y afinando todo con **cuentas tester** (Roles → Evaluador de
-Instagram). El comportamiento es idéntico; solo cambia a quién Meta permite responder.
+### instagram_business_manage_messages
+**¿Cómo usará tu app este permiso?** (pega):
+```
+Nuestra app envía respuestas automáticas por mensaje directo en nombre de una cuenta
+profesional de Instagram. Cuando una persona comenta una palabra clave en una publicación
+(la palabra se indica en el copy del post), la app le envía un DM con un botón para recibir
+un recurso gratuito (guía, artículo o video). Al tocar el botón, la app verifica si la
+persona sigue la cuenta y le entrega el recurso. Toda la mensajería ocurre dentro de las
+ventanas permitidas por Meta (24 horas y respuesta a comentarios). No enviamos mensajes no
+solicitados ni masivos en frío.
+```
+
+### instagram_business_manage_comments
+**¿Cómo usará tu app este permiso?** (pega):
+```
+Nuestra app detecta comentarios con una palabra clave en las publicaciones de la cuenta
+profesional (por ejemplo "AUTOMATIZA"). Usa ese comentario para iniciar una respuesta
+privada/DM que entrega el recurso solicitado por la persona. Solo actuamos sobre comentarios
+en los que la persona escribe explícitamente la palabra clave para pedir el recurso.
+```
+
+### Instrucciones para el revisor (pega en el campo de pasos de prueba)
+```
+1. Abre esta publicación: <PEGA_AQUI_LA_URL_DE_TU_POST>
+2. Comenta la palabra: AUTOMATIZA
+3. En segundos recibirás un DM de la cuenta con un botón "Obtener el enlace".
+4. Toca el botón "Obtener el enlace".
+5. Recibirás el enlace al recurso.
+Nota: el copy del post indica a los usuarios comentar la palabra clave para recibirlo.
+```
+
+---
+
+## PASO 3 — Video (screencast) obligatorio
+Graba la pantalla (celular o PC) mostrando el flujo COMPLETO desde una cuenta que NO sea la
+admin. Toma estas escenas, sin cortes:
+1. El post público y su copy ("Comenta AUTOMATIZA...").
+2. La otra cuenta escribiendo el comentario "AUTOMATIZA".
+3. Llega el DM con el botón "Obtener el enlace".
+4. Tocas el botón.
+5. Llega el enlace del recurso.
+Sube el video en el campo que pide cada permiso. Que se vea el uso real, claro y completo.
+
+---
+
+## PASO 4 — Enviar
+Revisa que cada permiso tenga: texto de uso + instrucciones + video. Luego **Enviar para revisión**.
+Meta responde en días. Si piden cambios, ajustas y reenvías.
+
+## Mientras revisan
+Sigues probando y creando campañas con **cuentas tester** (Roles → Evaluador de Instagram).
+El sistema ya funciona; App Review solo amplía a quién puedes responder.
