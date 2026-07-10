@@ -77,6 +77,16 @@ Sé pragmático. Sé confiable. Auto-corrígete.
 
 <!-- Agrega nuevas entradas arriba de esta línea. -->
 
+- **2026-07-09 — Host correcto: graph.instagram.com (no graph.facebook.com):** Los tokens de Instagram Login (`IGAA…`) solo son válidos contra `graph.instagram.com`. Llamarlos en `graph.facebook.com` da `OAuthException 190 "Cannot parse access token"`. **Por qué importa:** todas las llamadas (send, isFollower, caption, timestamp) deben usar ese host.
+
+- **2026-07-09 — Ventana 24h: usar hora de recepción:** Meta manda el `timestamp` del webhook en **segundos**; compararlo contra `Date.now()` (ms) hace creer que pasaron años → falso "fuera de ventana", bloquea todo. Fix: `lastUserInteractionAt = Date.now()` al recibir. **Por qué importa:** sin esto ningún envío sale.
+
+- **2026-07-09 — private_reply funciona, DMs de seguimiento no (regla Meta):** Un comentario permite UNA respuesta privada (`private_reply`, ventana ~7 días) que SÍ se envía. Pero DMs adicionales vía `/messages` dan `error 10 / 2534022 "outside allowed window"` hasta que el usuario ESCRIBA de vuelta (abre ventana 24h). **Por qué importa:** el flujo comment-to-DM debe entregar el valor en la respuesta privada o pedir "responde para recibir" y continuar cuando el usuario contesta (patrón ManyChat). Rediseño pendiente.
+
+- **2026-07-09 — Modo Desarrollo no entrega webhooks reales:** En modo Desarrollo solo llegan los eventos del botón "Probar" y de cuentas con rol (tester). Para eventos reales hay que pasar la app a **Activo** (requiere URL de política de privacidad válida). Para mensajear a CUALQUIER usuario (no solo testers) se necesita **Acceso Avanzado** a `instagram_business_manage_messages` vía App Review. **Por qué importa:** define qué se puede probar sin trámite y qué necesita App Review.
+
+- **2026-07-09 — cloudflared vs Norton:** Norton intercepta TLS (rompe `--protocol http2`: "certificate signed by unknown authority") y corta conexiones. El túnel QUIC por defecto (UDP) sí funciona pero puede flappear; medir estabilidad antes de dar la URL a Meta. URLs trycloudflare son **efímeras** (cambian al reiniciar) → para producción, deploy o túnel con nombre. **Por qué importa:** en esta máquina el túnel es frágil; el deploy es la solución real.
+
 - **2026-07-09 — Entrega Drive por fecha del post:** Service Account + carpeta con nombre que contiene `YYYY-MM-DD` + link compartible en el DM. El `mediaId` se guarda en el estado para resolver la fecha aunque el usuario llegue por el postback "ya te sigo". Probado end-to-end en dry-run. **Por qué importa:** el creador solo organiza Drive por fecha; el sistema entrega el PDF correcto sin mapear nada por post.
 
 - **2026-07-09 — Conflicto de tipos google-auth-library:** `@googleapis/drive` trae su propia copia anidada de `google-auth-library`; pasar el `GoogleAuth` del paquete top-level rompe el tipo (`#private`). Fix: cast `auth as unknown as never` (misma clase en runtime). **Por qué importa:** evita romper el typecheck sin degradar funcionalidad; no perder tiempo buscando otra causa.
