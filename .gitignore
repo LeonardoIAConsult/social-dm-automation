@@ -19,3 +19,6 @@ token.json
 
 # Binarios locales (cloudflared, etc.)
 .tools/
+
+# Kit de marca (privado, no se sube; el banner/diagrama van en docs/assets)
+brand/

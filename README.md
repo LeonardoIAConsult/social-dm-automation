@@ -1,68 +1,99 @@
-# social-dm-automation
+<p align="center">
+  <img src="docs/assets/banner.png" alt="InboxPilot" width="100%">
+</p>
 
-Motor de automatización de DMs para redes sociales, conectado **directo a la API de Meta** (Instagram) sin intermediarios tipo ManyChat. Flujos disparados por el usuario (comentario con palabra clave, DM entrante, respuesta a story) con **follow-gate**: el recurso de valor (PDF, link, etc.) se entrega **solo a quienes te siguen**.
+<h1 align="center">InboxPilot</h1>
 
-Arquitectura de **adaptadores** → hoy Instagram; extensible a Facebook y otras redes sin tocar la lógica de negocio.
+<p align="center">
+  <b>Automatiza tus DMs de Instagram, conectado directo a la API de Meta.</b><br>
+  Alguien comenta una palabra clave en tu post → recibe un DM con un botón → al tocarlo,
+  le entregas el recurso (PDF, artículo o video). Con <b>follow-gate</b> y dentro de las
+  reglas de Meta. Sin intermediarios tipo ManyChat.
+</p>
 
-> ⚠️ **Lee [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) antes de usar.** Este sistema opera dentro de las políticas de Meta. El DM masivo en frío **no** es posible sin arriesgar un ban: Meta solo permite mensajear dentro de una ventana de 24h que **el usuario** abre al interactuar contigo.
+---
 
-## Qué hace
-- Recibe webhooks de Instagram (mensajes, comentarios, postbacks, story replies).
-- Valida la firma `X-Hub-Signature-256` de cada webhook.
-- Hace match de **campañas** por palabra clave.
-- Aplica el **follow-gate** con el campo oficial `is_user_follow_business`.
-- Si la persona te sigue → entrega el valor. Si no → le pide seguirte y reintenta con un botón.
-- Respeta la ventana de 24h y evita reenvíos duplicados.
-- **Entrega desde Google Drive por fecha del post**: manda el PDF de la carpeta de Drive marcada con la fecha del post donde comentaron (Service Account + link compartible).
-- **Modo DRY_RUN** para probar todo el flujo local sin credenciales (ver más abajo).
+## ¿Qué hace?
+
+Convierte comentarios en conversaciones y leads, automático:
+
+1. Publicas un post cuyo copy dice *"Comenta AUTOMATIZA y te lo envío"*.
+2. Alguien comenta **AUTOMATIZA** (o `guía`, `ver más`… lo que definas).
+3. InboxPilot le manda un DM: *"¡Hola! Toca abajo para recibirlo"* + botón **[Obtener el enlace]**.
+4. La persona toca el botón → se verifica que **te siga** → recibe el link/documento.
+
+Las palabras y los links salen de una **Google Sheet** que tú manejas — sin tocar código.
+
+<p align="center">
+  <img src="docs/assets/como-funciona.png" alt="Cómo funciona InboxPilot" width="90%">
+</p>
+
+## Características
+
+- 🔌 **Directo a la API de Meta** (Instagram) — sin plataformas intermediarias.
+- 💬 **Comment-to-DM** con botón (patrón ManyChat) dentro de las ventanas de Meta.
+- 🔒 **Follow-gate**: entrega el recurso solo a quien te sigue (`is_user_follow_business`).
+- 📄 **Recursos desde Google Sheet**: palabra → link (PDF de Drive, web o YouTube). Editas la hoja, cambios en ~1 min.
+- 🧠 **Match robusto**: ignora tildes, mayúsculas, signos y palabras extra (`guía` = `GUIA` = `Guia!`).
+- 🛡️ Valida la firma `X-Hub-Signature-256` de cada webhook; evita reenvíos duplicados.
+- 🧩 **Arquitectura de adaptadores** — hoy Instagram; extensible a Facebook.
+- 🧪 **Modo DRY_RUN** para probar todo el flujo sin credenciales.
 
 ## Qué NO hace (a propósito)
-- DM masivo en frío a desconocidos (prohibido por Meta).
-- LinkedIn / YouTube DMs (sus APIs no lo permiten).
+
+- ❌ DM masivo en frío a desconocidos (prohibido por Meta = ban).
+- ❌ LinkedIn / YouTube DMs (sus APIs no lo permiten).
+
+> ⚠️ Lee [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md). Meta solo permite mensajear dentro de una
+> ventana de 24h que **el usuario** abre al interactuar. InboxPilot opera dentro de esas reglas.
+
+## Cómo configuras tus campañas
+
+Todo vive en tu **Google Sheet** de planeación (guía: [`docs/RESOURCES_SHEET.md`](docs/RESOURCES_SHEET.md)):
+
+| CTA (columna) | Recurso_DM (columna) |
+|---|---|
+| Comenta **AUTOMATIZA** → DM | https://tu-web.com/articulo |
+| Comenta **GUIA** → DM | https://drive.google.com/…/guia.pdf |
+
+El sistema saca la **palabra** del CTA y el **link** de `Recurso_DM`. Agregas filas = agregas campañas.
 
 ## Stack
-Node.js + TypeScript · Express · Zod · Pino. Sin base de datos en el MVP (estado en memoria, cambiable a Redis/Postgres).
+
+Node.js + TypeScript · Express · Zod · Pino · Google Sheets (CSV). Estado en memoria (cambiable a Redis/Postgres). Deploy en Render (Docker).
 
 ## Arranque rápido
+
 ```bash
 npm install
 cp .env.example .env      # rellena los valores (ver docs/SETUP_META.md)
 npm run dev               # servidor en http://localhost:3000
-npm test                  # tests del parser y matcher
-npm run typecheck         # chequeo de tipos
+npm test                  # tests
+npm run typecheck
 ```
-Expón el puerto con `ngrok http 3000` y usa esa URL https como Callback URL del webhook en el panel de Meta.
 
-## Probar sin credenciales (DRY_RUN)
-Con `DRY_RUN=true` en `.env`, el server simula el Graph API y Drive (loguea en vez de llamar).
-Arranca `npm run dev` y en otra terminal dispara webhooks falsos:
+### Probar sin credenciales (DRY_RUN)
+
+Con `DRY_RUN=true`, el server simula la API de Meta (loguea en vez de llamar):
+
 ```bash
-node execution/simulate_webhook.mjs comment "quiero la GUIA"     # comment-to-DM
-node execution/simulate_webhook.mjs message "GUIA"               # DM directo
-node execution/simulate_webhook.mjs follow-check freebie-guia    # botón "ya te sigo"
+node execution/simulate_webhook.mjs comment "quiero AUTOMATIZA"   # comment-to-DM
+node execution/simulate_webhook.mjs follow-check default          # botón "ya te sigo"
 ```
-Verás en los logs del server el flujo completo: match → follow-gate → entrega (incl. link de Drive).
-
-## Definir tus campañas
-Edita [`src/core/campaigns.ts`](src/core/campaigns.ts). Es lo único que la mayoría necesita tocar: palabra clave, si exige seguir, textos y el contenido a entregar.
-
-Dos modos de disparo:
-- **`keywords`** — tú fijas las palabras clave.
-- **`caption`** — el sistema **deriva la keyword del copy del post/carrusel/story** en tiempo real (ej. publicas «Comenta "PLANTILLA" y te la mando» → dispara solo, sin registrar nada por post). Ver [`directives/caption_driven_keywords.md`](directives/caption_driven_keywords.md).
-
-## Marco de operación (3 capas + aprendizajes)
-El repo sigue una arquitectura de 3 capas (Directiva → Orquestación → Ejecución) con un
-registro de aprendizajes que se actualiza en cada ciclo. Ver [`AGENTS.md`](AGENTS.md) y [`directives/`](directives/).
 
 ## Documentación
-- [`AGENTS.md`](AGENTS.md) — manual de operación del agente + registro de aprendizajes.
-- [`directives/`](directives/) — SOPs (crear campaña, keyword desde el copy).
-- [`docs/SETUP_META.md`](docs/SETUP_META.md) — crear la app Meta, permisos, App Review, webhook.
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — cómo está armado y cómo sumar otra red.
-- [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) — reglas de Meta que el sistema respeta.
 
-## Estado
-MVP funcional para Instagram. Roadmap: adaptador Facebook, persistencia en DB, broadcast a ventanas abiertas.
+- [`docs/SETUP_META.md`](docs/SETUP_META.md) — crear la app Meta, token, webhook.
+- [`docs/DEPLOY.md`](docs/DEPLOY.md) — deploy a Render (URL fija).
+- [`docs/RESOURCES_SHEET.md`](docs/RESOURCES_SHEET.md) — la Google Sheet de recursos.
+- [`docs/APP_REVIEW.md`](docs/APP_REVIEW.md) — App Review para responder al público.
+- [`docs/CONNECTIONS.md`](docs/CONNECTIONS.md) — estado de cada integración.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · [`docs/COMPLIANCE.md`](docs/COMPLIANCE.md) · [`AGENTS.md`](AGENTS.md)
+
+## Roadmap
+
+Adaptador Facebook · persistencia en DB · broadcast a ventanas abiertas · App Review (acceso público).
 
 ## Licencia
+
 MIT — ver [`LICENSE`](LICENSE).
