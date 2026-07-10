@@ -24,6 +24,9 @@ const base = z.object({
   DRY_RUN: bool('false'),
   FOLLOW_GATE_ENABLED: bool('true'),
 
+  // Google Sheet publicada como CSV con el mapa palabra -> link (opcional).
+  RESOURCES_SHEET_CSV_URL: z.string().default(''),
+
   // En DRY_RUN estos valores simulan la respuesta del Graph API.
   SIM_IS_FOLLOWER: bool('true'),
   SIM_CAPTION: z.string().default('Comenta "GUIA" y te la mando 🎁'),

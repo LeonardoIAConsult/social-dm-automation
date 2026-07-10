@@ -5,10 +5,16 @@ import {
   type ConversationState,
   type ConversationStore,
 } from '../store/conversationStore.js';
-import { captionCampaigns, getCampaign, matchCampaign, type Campaign } from './campaigns.js';
+import {
+  captionCampaigns,
+  getCampaign,
+  matchCampaign,
+  sheetCampaigns,
+  type Campaign,
+} from './campaigns.js';
 import { extractKeywordFromCaption } from './keywordExtractor.js';
 import { matchesKeyword } from './textMatch.js';
-import { getResource } from './resources.js';
+import { getResource, findMatchingKeyword } from './resources.js';
 import { googleDrive, toDateFolderName } from '../integrations/googleDrive.js';
 import type { IncomingEvent, PlatformAdapter } from './types.js';
 
@@ -129,6 +135,18 @@ export class FlowEngine {
       return direct;
     }
 
+    // Modo 'sheet': el comentario/DM matchea cualquier palabra de la hoja.
+    const sheets = sheetCampaigns(event.type);
+    if (sheets.length > 0 && event.text) {
+      const kw = await findMatchingKeyword(event.text);
+      if (kw) {
+        state.data.matchedKeyword = kw;
+        logger.info({ keyword: kw }, 'Palabra de la hoja detectada');
+        return sheets[0];
+      }
+    }
+
+    // Modo 'caption': deriva la keyword del copy del post (requiere comentario).
     if (event.type !== 'comment' || !event.mediaId || !event.text) return undefined;
     const candidates = captionCampaigns(event.type, event.mediaId);
     if (candidates.length === 0) return undefined;
@@ -213,7 +231,7 @@ export class FlowEngine {
   ): Promise<void> {
     if (!campaign.deliverFromKeyword) return;
     const kw = typeof state.data.matchedKeyword === 'string' ? state.data.matchedKeyword : undefined;
-    const res = getResource(kw);
+    const res = await getResource(kw);
     if (!res) {
       logger.warn({ keyword: kw }, 'Sin recurso mapeado para la keyword (revisa resources.ts)');
       return;

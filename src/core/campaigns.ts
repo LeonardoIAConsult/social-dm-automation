@@ -17,12 +17,13 @@ export interface Campaign {
     /**
      * Modo de la keyword:
      *  - 'keywords': usas la lista `keywords` de abajo (control manual).
-     *  - 'caption' : el sistema deriva la keyword del copy del post/story en
-     *                tiempo real (ver keywordExtractor). No hace falta registrar
-     *                nada por post; funciona en cualquier publicacion.
+     *  - 'caption' : deriva la keyword del copy del post en tiempo real.
+     *  - 'sheet'   : dispara si el comentario matchea CUALQUIER palabra de la
+     *                Google Sheet de recursos (resources.ts). Ideal para tener
+     *                muchas palabras sin registrar nada en codigo.
      * Default: 'keywords'.
      */
-    mode?: 'keywords' | 'caption';
+    mode?: 'keywords' | 'caption' | 'sheet';
     /** Palabras clave (case-insensitive, match por inclusion). Solo en modo 'keywords'. */
     keywords: string[];
     /** Tipos de evento que la activan. */
@@ -103,15 +104,15 @@ export const campaigns: Campaign[] = [
     deliverFromKeyword: true,
   },
 
-  // Campana auto-copy: NO registras keyword por post. El sistema lee el caption
-  // del reel/carrusel donde comentaron (ej. «Comenta "PLANTILLA" y te la mando»)
-  // y dispara si el comentario contiene esa palabra derivada del copy.
+  // Campana principal (modo 'sheet'): dispara si el comentario/DM matchea
+  // CUALQUIER palabra de tu Google Sheet de recursos. Agregas palabras y links
+  // en la hoja, sin tocar codigo. Funciona en cualquier post.
   {
-    name: 'auto-copy',
+    name: 'default',
     trigger: {
-      mode: 'caption',
-      keywords: [], // se ignoran en modo caption; se derivan del post
-      eventTypes: ['comment'],
+      mode: 'sheet',
+      keywords: [], // vienen de la hoja
+      eventTypes: ['comment', 'message'],
     },
     requireFollow: true,
     copy: {
@@ -144,7 +145,7 @@ export function matchCampaign(
   mediaId: string | undefined,
 ): Campaign | undefined {
   return campaigns.find((c) => {
-    if ((c.trigger.mode ?? 'keywords') === 'caption') return false;
+    if ((c.trigger.mode ?? 'keywords') !== 'keywords') return false;
     if (!c.trigger.eventTypes.includes(eventType)) return false;
     if (c.trigger.mediaId && c.trigger.mediaId !== mediaId) return false;
     if (c.trigger.keywords.length === 0) return true;
@@ -163,6 +164,13 @@ export function captionCampaigns(
     if (c.trigger.mediaId && c.trigger.mediaId !== mediaId) return false;
     return true;
   });
+}
+
+/** Campanas en modo 'sheet' (disparan con cualquier palabra de la hoja). */
+export function sheetCampaigns(eventType: IncomingEventType): Campaign[] {
+  return campaigns.filter(
+    (c) => c.trigger.mode === 'sheet' && c.trigger.eventTypes.includes(eventType),
+  );
 }
 
 export function getCampaign(name: string): Campaign | undefined {
