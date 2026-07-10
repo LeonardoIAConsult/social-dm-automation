@@ -79,31 +79,6 @@ export interface Campaign {
  * Este arreglo es lo unico que la mayoria de usuarios necesita tocar.
  */
 export const campaigns: Campaign[] = [
-  {
-    name: 'freebie-guia',
-    trigger: {
-      keywords: ['GUIA', 'GUÍA', 'QUIERO'],
-      eventTypes: ['comment', 'message'],
-    },
-    requireFollow: true,
-    copy: {
-      publicReply: '¡Te lo mando por DM! 📩',
-      welcome:
-        '¡Hola! Estoy muy feliz de que estés aquí, muchas gracias por tu interés 😊\n\n' +
-        'Haz clic abajo y te enviaré el enlace en un momento ✨',
-      getLinkButtonTitle: 'Obtener el enlace',
-      askToFollow:
-        'Para enviártela solo necesito que me sigas (así apoyas el contenido gratis). ' +
-        'Cuando ya me sigas, toca el botón de abajo 👇',
-      followedButtonTitle: 'Ya te sigo ✅',
-      stillNotFollowing:
-        'Todavía no veo que me sigas 🤔. Dale seguir y vuelve a tocar el botón, ¡y te la mando al instante!',
-    },
-    // El link sale del mapa palabra->recurso (resources.ts) segun la keyword.
-    deliver: [],
-    deliverFromKeyword: true,
-  },
-
   // Campana principal (modo 'sheet'): dispara si el comentario/DM matchea
   // CUALQUIER palabra de tu Google Sheet de recursos. Agregas palabras y links
   // en la hoja, sin tocar codigo. Funciona en cualquier post.

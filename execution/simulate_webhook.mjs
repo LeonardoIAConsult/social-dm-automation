@@ -95,7 +95,9 @@ function body() {
 const payload = JSON.stringify(body());
 const signature = 'sha256=' + crypto.createHmac('sha256', SECRET).update(payload).digest('hex');
 
-const url = `http://localhost:${PORT}/webhooks/instagram`;
+// TARGET permite apuntar a produccion (Render). Por defecto, local.
+const target = process.env.TARGET || `http://localhost:${PORT}`;
+const url = `${target.replace(/\/$/, '')}/webhooks/instagram`;
 console.log(`→ POST ${url}\n  tipo=${kind} texto="${arg}" user=${USER} media=${MEDIA}`);
 
 const res = await fetch(url, {

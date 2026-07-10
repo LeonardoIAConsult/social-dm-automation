@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { parseInstagramWebhook } from '../src/platforms/instagram/webhookParser.js';
-import { matchCampaign } from '../src/core/campaigns.js';
+import { sheetCampaigns } from '../src/core/campaigns.js';
 
 test('parsea un DM de texto entrante', () => {
   const body = {
@@ -64,12 +64,12 @@ test('parsea un comentario con keyword', () => {
   assert.equal(events[0]?.mediaId, 'MEDIA1');
 });
 
-test('matchCampaign encuentra la campana por keyword', () => {
-  const c = matchCampaign('comment', 'dame la GUIA porfa', undefined);
-  assert.equal(c?.name, 'freebie-guia');
+test('existe la campana principal en modo sheet para comentarios', () => {
+  const cs = sheetCampaigns('comment');
+  assert.equal(cs[0]?.name, 'default');
 });
 
-test('matchCampaign no matchea sin keyword', () => {
-  const c = matchCampaign('comment', 'hola lindo post', undefined);
-  assert.equal(c, undefined);
+test('la campana default aplica a comment y message', () => {
+  assert.equal(sheetCampaigns('comment').length, 1);
+  assert.equal(sheetCampaigns('message').length, 1);
 });
