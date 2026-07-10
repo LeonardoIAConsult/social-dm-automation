@@ -54,6 +54,13 @@ export interface Campaign {
   deliver: OutgoingMessage[];
 
   /**
+   * Si true, entrega el recurso mapeado a la palabra clave detectada (ver
+   * resources.ts). Ideal para modo 'caption': la palabra del copy define que
+   * link/documento enviar. Se entrega ADEMAS de `deliver`.
+   */
+  deliverFromKeyword?: boolean;
+
+  /**
    * Entrega adicional desde Google Drive, resuelta por la FECHA del post donde
    * comentaron: manda el link del documento de la carpeta con esa fecha.
    * Requiere GDRIVE_ENABLED y un evento con mediaId (comentario). Ver
@@ -91,10 +98,9 @@ export const campaigns: Campaign[] = [
       stillNotFollowing:
         'Todavía no veo que me sigas 🤔. Dale seguir y vuelve a tocar el botón, ¡y te la mando al instante!',
     },
-    deliver: [
-      { kind: 'text', text: '¡Listo! Aquí está tu guía 🎁' },
-      { kind: 'text', text: 'https://tu-dominio.com/guia.pdf' },
-    ],
+    // El link sale del mapa palabra->recurso (resources.ts) segun la keyword.
+    deliver: [],
+    deliverFromKeyword: true,
   },
 
   // Campana auto-copy: NO registras keyword por post. El sistema lee el caption
@@ -120,12 +126,10 @@ export const campaigns: Campaign[] = [
       stillNotFollowing:
         'Aún no veo que me sigas 🤔. Dale seguir y vuelve a tocar el botón.',
     },
-    // El documento se resuelve desde Drive por la fecha del post (no link fijo).
+    // El link sale del mapa palabra->recurso (resources.ts): la palabra del copy
+    // (GUIA, AUTOMATIZA, VER MAS...) define que documento se envia.
     deliver: [],
-    driveDelivery: {
-      enabled: true,
-      prependText: '¡Listo! Aquí tienes el material del post 🎁',
-    },
+    deliverFromKeyword: true,
   },
 ];
 

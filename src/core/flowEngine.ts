@@ -8,6 +8,7 @@ import {
 import { captionCampaigns, getCampaign, matchCampaign, type Campaign } from './campaigns.js';
 import { extractKeywordFromCaption } from './keywordExtractor.js';
 import { matchesKeyword } from './textMatch.js';
+import { getResource } from './resources.js';
 import { googleDrive, toDateFolderName } from '../integrations/googleDrive.js';
 import type { IncomingEvent, PlatformAdapter } from './types.js';
 
@@ -66,7 +67,7 @@ export class FlowEngine {
         return;
       }
 
-      const campaign = await this.resolveCampaign(adapter, event);
+      const campaign = await this.resolveCampaign(adapter, state, event);
       if (!campaign) {
         logger.debug({ type: event.type, text: event.text }, 'Sin campana que haga match');
         return;
@@ -116,10 +117,17 @@ export class FlowEngine {
    */
   private async resolveCampaign(
     adapter: PlatformAdapter,
+    state: ConversationState,
     event: IncomingEvent,
   ): Promise<Campaign | undefined> {
     const direct = matchCampaign(event.type, event.text, event.mediaId);
-    if (direct) return direct;
+    if (direct) {
+      // Guarda cual keyword hizo match, para entregar el recurso mapeado.
+      state.data.matchedKeyword = direct.trigger.keywords.find((k) =>
+        matchesKeyword(event.text, k),
+      );
+      return direct;
+    }
 
     if (event.type !== 'comment' || !event.mediaId || !event.text) return undefined;
     const candidates = captionCampaigns(event.type, event.mediaId);
@@ -129,6 +137,7 @@ export class FlowEngine {
     if (!keyword) return undefined;
     if (!matchesKeyword(event.text, keyword)) return undefined;
 
+    state.data.matchedKeyword = keyword;
     logger.info({ mediaId: event.mediaId, keyword }, 'Keyword derivada del copy del post');
     return candidates[0];
   }
@@ -189,10 +198,28 @@ export class FlowEngine {
     for (const msg of campaign.deliver) {
       await this.safeSend(adapter, state, msg);
     }
+    await this.deliverFromKeyword(adapter, state, campaign);
     await this.deliverFromDrive(adapter, state, campaign);
     state.data[flagKey] = true;
     state.step = 'delivered';
     logger.info({ user: state.userId, campaign: campaign.name }, 'Valor entregado ✅');
+  }
+
+  /** Entrega el recurso (link/doc) mapeado a la palabra clave detectada. */
+  private async deliverFromKeyword(
+    adapter: PlatformAdapter,
+    state: ConversationState,
+    campaign: Campaign,
+  ): Promise<void> {
+    if (!campaign.deliverFromKeyword) return;
+    const kw = typeof state.data.matchedKeyword === 'string' ? state.data.matchedKeyword : undefined;
+    const res = getResource(kw);
+    if (!res) {
+      logger.warn({ keyword: kw }, 'Sin recurso mapeado para la keyword (revisa resources.ts)');
+      return;
+    }
+    if (res.text) await this.safeSend(adapter, state, { kind: 'text', text: res.text });
+    await this.safeSend(adapter, state, { kind: 'text', text: res.url });
   }
 
   /** Entrega el documento de Drive resuelto por la fecha del post de origen. */
