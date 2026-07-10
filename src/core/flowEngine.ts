@@ -10,6 +10,9 @@ import { extractKeywordFromCaption } from './keywordExtractor.js';
 import { googleDrive, toDateFolderName } from '../integrations/googleDrive.js';
 import type { IncomingEvent, PlatformAdapter } from './types.js';
 
+/** Prefijo del payload del boton "Obtener el enlace" (abre la ventana de 24h). */
+const GET_PREFIX = 'GET_LINK:';
+
 /** Prefijo del payload que reintenta el gate tras "ya te sigo". */
 const CHECK_PREFIX = 'CHECK_FOLLOW:';
 
@@ -47,10 +50,18 @@ export class FlowEngine {
     if (event.mediaId) state.data.mediaId = event.mediaId;
 
     try {
+      // El usuario toco "Obtener el enlace": su interaccion abrio la ventana de
+      // 24h, ahora SI podemos aplicar el gate y entregar el valor por DM.
+      if (event.type === 'postback' && event.payload?.startsWith(GET_PREFIX)) {
+        const campaign = getCampaign(event.payload.slice(GET_PREFIX.length));
+        if (campaign) await this.runGate(adapter, state, campaign);
+        return;
+      }
+
+      // El usuario toco "Ya te sigo": re-chequeamos el follow.
       if (event.type === 'postback' && event.payload?.startsWith(CHECK_PREFIX)) {
-        const campaignName = event.payload.slice(CHECK_PREFIX.length);
-        const campaign = getCampaign(campaignName);
-        if (campaign) await this.runGate(adapter, state, campaign, event);
+        const campaign = getCampaign(event.payload.slice(CHECK_PREFIX.length));
+        if (campaign) await this.runGate(adapter, state, campaign);
         return;
       }
 
@@ -60,22 +71,39 @@ export class FlowEngine {
         return;
       }
 
-      // Respuesta publica al comentario (una sola vez), sin revelar el valor.
-      if (event.type === 'comment' && event.commentId && campaign.copy.publicReply) {
-        await adapter.sendMessage(state.userId, {
-          kind: 'private_reply',
-          commentId: event.commentId,
-          text: campaign.copy.publicReply,
-        });
-      }
-
       state.activeFlow = campaign.name;
-      if (campaign.copy.welcome) {
-        await this.safeSend(adapter, state, { kind: 'text', text: campaign.copy.welcome });
-      }
-      await this.runGate(adapter, state, campaign, event);
+      // Patron comment-to-DM (estilo ManyChat): NO entregamos aun. Mandamos el
+      // welcome con el boton "Obtener el enlace". Al tocarlo, el usuario abre la
+      // ventana de 24h y ahi entregamos (regla de Meta: no puedes mandar DMs de
+      // seguimiento hasta que la persona interactue de vuelta).
+      await this.sendEntry(adapter, state, campaign, event);
     } finally {
       await this.store.upsert(state);
+    }
+  }
+
+  /** Envia el mensaje de entrada (welcome + boton "Obtener el enlace"). */
+  private async sendEntry(
+    adapter: PlatformAdapter,
+    state: ConversationState,
+    campaign: Campaign,
+    event: IncomingEvent,
+  ): Promise<void> {
+    const button = { title: campaign.copy.getLinkButtonTitle, payload: GET_PREFIX + campaign.name };
+    const text = campaign.copy.welcome ?? '¡Hola! 👋';
+
+    if (event.type === 'comment' && event.commentId) {
+      // Respuesta privada al comentario, con el boton adjunto. Es el unico envio
+      // permitido antes de que la persona interactue de vuelta.
+      await adapter.sendMessage(state.userId, {
+        kind: 'private_reply',
+        commentId: event.commentId,
+        text,
+        buttons: [button],
+      });
+    } else {
+      // Disparado por DM entrante: la ventana ya esta abierta, mandamos con boton.
+      await this.safeSend(adapter, state, { kind: 'buttons', text, buttons: [button] });
     }
   }
 
@@ -123,15 +151,15 @@ export class FlowEngine {
     adapter: PlatformAdapter,
     state: ConversationState,
     campaign: Campaign,
-    event: IncomingEvent,
   ): Promise<void> {
     const gateOn = env.FOLLOW_GATE_ENABLED && campaign.requireFollow;
 
     if (gateOn) {
       const follows = await this.checkFollow(adapter, state);
       if (follows === false) {
+        // Reintento = la persona ya venia en 'awaiting_follow' y volvio a tocar.
+        const retry = state.step === 'awaiting_follow';
         state.step = 'awaiting_follow';
-        const retry = event.type === 'postback';
         await this.safeSend(adapter, state, {
           kind: 'buttons',
           text: retry ? campaign.copy.stillNotFollowing : campaign.copy.askToFollow,

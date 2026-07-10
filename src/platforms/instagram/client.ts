@@ -50,9 +50,19 @@ export class InstagramClient {
           },
         };
 
-      case 'private_reply':
+      case 'private_reply': {
         // Respuesta privada a un comentario: recipient es el comment_id.
-        return { recipient: { comment_id: message.commentId }, message: { text: message.text } };
+        // Puede incluir quick_replies (botones) para el patron comment-to-DM.
+        const msg: Record<string, unknown> = { text: message.text };
+        if (message.buttons?.length) {
+          msg.quick_replies = message.buttons.map((b) => ({
+            content_type: 'text',
+            title: b.title,
+            payload: b.payload,
+          }));
+        }
+        return { recipient: { comment_id: message.commentId }, message: msg };
+      }
     }
   }
 

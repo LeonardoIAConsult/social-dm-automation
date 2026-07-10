@@ -37,8 +37,10 @@ export interface Campaign {
   copy: {
     /** Respuesta publica al comentario (opcional). No revela el valor. */
     publicReply?: string;
-    /** Primer DM al abrir el flujo. */
+    /** Primer DM al abrir el flujo (se envia junto al boton "Obtener el enlace"). */
     welcome?: string;
+    /** Texto del boton que la persona toca para recibir el valor (abre la ventana). */
+    getLinkButtonTitle: string;
     /** DM cuando la persona NO sigue todavia. */
     askToFollow: string;
     /** Texto del boton para reintentar tras seguir. */
@@ -77,7 +79,10 @@ export const campaigns: Campaign[] = [
     requireFollow: true,
     copy: {
       publicReply: '¡Te lo mando por DM! 📩',
-      welcome: '¡Hola! Vi que quieres la guía 🙌',
+      welcome:
+        '¡Hola! Estoy muy feliz de que estés aquí, muchas gracias por tu interés 😊\n\n' +
+        'Haz clic abajo y te enviaré el enlace en un momento ✨',
+      getLinkButtonTitle: 'Obtener el enlace',
       askToFollow:
         'Para enviártela solo necesito que me sigas (así apoyas el contenido gratis). ' +
         'Cuando ya me sigas, toca el botón de abajo 👇',
@@ -104,7 +109,10 @@ export const campaigns: Campaign[] = [
     requireFollow: true,
     copy: {
       publicReply: '¡Te lo mando por DM! 📩',
-      welcome: '¡Hola! Ya vi tu comentario 🙌',
+      welcome:
+        '¡Hola! Estoy muy feliz de que estés aquí, muchas gracias por tu interés 😊\n\n' +
+        'Haz clic abajo y te enviaré el enlace en un momento ✨',
+      getLinkButtonTitle: 'Obtener el enlace',
       askToFollow:
         'Para enviártelo solo necesito que me sigas. Cuando ya me sigas, toca el botón 👇',
       followedButtonTitle: 'Ya te sigo ✅',

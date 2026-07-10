@@ -46,7 +46,7 @@ export type OutgoingMessage =
   | { kind: 'text'; text: string }
   | { kind: 'image'; url: string; text?: string }
   | { kind: 'buttons'; text: string; buttons: OutgoingButton[] }
-  | { kind: 'private_reply'; commentId: string; text: string };
+  | { kind: 'private_reply'; commentId: string; text: string; buttons?: OutgoingButton[] };
 
 export interface OutgoingButton {
   title: string;
