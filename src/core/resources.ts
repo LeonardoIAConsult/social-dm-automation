@@ -95,8 +95,10 @@ function parseSheet(csv: string): Record<string, ResourceItem> {
   const kwCol = cleanKw !== -1 ? cleanKw : ctaKw;
   const kwIsPhrase = cleanKw === -1; // si viene de CTA, hay que extraer la palabra
 
-  // Columna de link: prioriza asset/drive; si no, link/url/enlace (no "publicado").
-  let urlCol = findIncludes('asset');
+  // Columna de link: prioriza 'Recurso_DM' (la que define Leonardo para el DM),
+  // luego asset/drive, luego link/url/enlace (nunca 'Link_Publicado').
+  let urlCol = findIncludes('recurso');
+  if (urlCol === -1) urlCol = findIncludes('asset');
   if (urlCol === -1) urlCol = findIncludes('drive');
   if (urlCol === -1) urlCol = header.findIndex((h) => ['link', 'url', 'enlace'].includes(h));
   if (urlCol === -1) urlCol = findIncludes('link', 'publicado');
