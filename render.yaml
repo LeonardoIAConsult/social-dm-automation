@@ -1,0 +1,33 @@
+# Blueprint de Render. Al conectar el repo, Render lee esto y crea el servicio.
+# Los secretos (sync:false) se ponen a mano en el dashboard de Render, NO en git.
+services:
+  - type: web
+    name: social-dm-automation
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GRAPH_API_VERSION
+        value: v21.0
+      - key: FOLLOW_GATE_ENABLED
+        value: "true"
+      - key: DRY_RUN
+        value: "false"
+      - key: GDRIVE_ENABLED
+        value: "false"
+      # ── Secretos: se configuran en el dashboard de Render ──
+      - key: META_APP_SECRET
+        sync: false
+      - key: META_WEBHOOK_VERIFY_TOKEN
+        sync: false
+      - key: IG_ACCESS_TOKEN
+        sync: false
+      - key: IG_BUSINESS_ACCOUNT_ID
+        sync: false
+      - key: GDRIVE_ROOT_FOLDER_ID
+        sync: false
