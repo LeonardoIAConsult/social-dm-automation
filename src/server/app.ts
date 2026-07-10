@@ -3,6 +3,7 @@ import { env } from '../config/env.js';
 import { logger } from '../utils/logger.js';
 import type { FlowEngine } from '../core/flowEngine.js';
 import type { PlatformAdapter } from '../core/types.js';
+import { privacyHtml, termsHtml } from './legal.js';
 
 /** Request con el cuerpo crudo guardado para validar la firma HMAC. */
 interface RawRequest extends Request {
@@ -22,6 +23,10 @@ export function createApp(engine: FlowEngine, adapters: Map<string, PlatformAdap
   );
 
   app.get('/health', (_req, res) => res.json({ ok: true }));
+
+  // Paginas legales requeridas por Meta para publicar la app.
+  app.get('/privacy', (_req, res) => res.type('html').send(privacyHtml));
+  app.get('/terms', (_req, res) => res.type('html').send(termsHtml));
 
   // ── Verificacion del webhook (handshake inicial de Meta) ──────────────
   app.get('/webhooks/instagram', (req, res) => {

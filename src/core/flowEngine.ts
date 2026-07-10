@@ -39,7 +39,9 @@ export class FlowEngine {
 
     const state = await this.loadState(event);
     // La llegada de cualquier evento del usuario renueva la ventana de 24h.
-    state.lastUserInteractionAt = event.timestamp || Date.now();
+    // Usamos la hora de RECEPCION (ahora): el usuario acaba de interactuar, asi
+    // evitamos problemas de unidad (Meta envia el timestamp en segundos, no ms).
+    state.lastUserInteractionAt = Date.now();
     // Recuerda el post de origen: la entrega por Drive lo necesita aunque el
     // usuario llegue luego por el boton "ya te sigo" (postback sin mediaId).
     if (event.mediaId) state.data.mediaId = event.mediaId;

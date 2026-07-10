@@ -43,29 +43,34 @@ async function j(url) {
 }
 
 try {
-  // 1) Token corto -> largo (flujo Instagram Login).
-  const ex = await j(
-    `https://graph.instagram.com/access_token?grant_type=ig_exchange_token` +
-      `&client_secret=${encodeURIComponent(APP_SECRET)}` +
-      `&access_token=${encodeURIComponent(SHORT)}`,
-  );
-  const longToken = ex.access_token;
-  console.log(`\n✅ Token de larga duracion (expira en ~${Math.round((ex.expires_in ?? 0) / 86400)} dias):`);
-  console.log(longToken);
-
-  // 2) IG user id (sirve como IG_BUSINESS_ACCOUNT_ID en el flujo Instagram Login).
+  // 1) Valida el token y obtiene el IG user id (funciona sea corto o largo).
   const me = await j(
-    `https://graph.instagram.com/me?fields=user_id,username&access_token=${encodeURIComponent(longToken)}`,
+    `https://graph.instagram.com/me?fields=user_id,username&access_token=${encodeURIComponent(SHORT)}`,
   );
-  console.log(`\n✅ Tu cuenta: @${me.username}  (user_id: ${me.user_id})`);
+  console.log(`\n✅ Token valido. Cuenta: @${me.username}  (user_id: ${me.user_id})`);
 
-  console.log('\n👉 Pega esto en tu .env:');
-  console.log(`IG_ACCESS_TOKEN=${longToken}`);
+  // 2) Intenta canjear a token de larga duracion (~60 dias). Si el token ya
+  //    era largo, el canje puede fallar: no es fatal, usamos el token dado.
+  let finalToken = SHORT;
+  try {
+    const ex = await j(
+      `https://graph.instagram.com/access_token?grant_type=ig_exchange_token` +
+        `&client_secret=${encodeURIComponent(APP_SECRET)}` +
+        `&access_token=${encodeURIComponent(SHORT)}`,
+    );
+    if (ex.access_token) {
+      finalToken = ex.access_token;
+      console.log(`✅ Canjeado a token largo (expira en ~${Math.round((ex.expires_in ?? 0) / 86400)} dias).`);
+    }
+  } catch (e) {
+    console.log(`ℹ️  No se canjeo (probablemente ya era de larga duracion): ${e.message}`);
+  }
+
+  console.log('\n👉 Valores para el .env:');
+  console.log(`IG_ACCESS_TOKEN=${finalToken}`);
   console.log(`IG_BUSINESS_ACCOUNT_ID=${me.user_id}`);
-  console.log('\nY recuerda: DRY_RUN=false para modo real.');
 } catch (err) {
-  console.error('\n❌ Fallo:', err.message);
-  console.error('Verifica que el token corto sea valido y que la app tenga Instagram configurado.');
-  console.error('Si usas Facebook Login (no Instagram Login), el endpoint es distinto (oauth/access_token con fb_exchange_token).');
+  console.error('\n❌ Token invalido o app mal configurada:', err.message);
+  console.error('Revisa que el token sea reciente y que aceptaste la invitacion de Evaluador de Instagram.');
   process.exit(1);
 }

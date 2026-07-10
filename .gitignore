@@ -16,3 +16,6 @@ data/*.json
 # Credenciales OAuth (solo si un flujo las usa)
 credentials.json
 token.json
+
+# Binarios locales (cloudflared, etc.)
+.tools/

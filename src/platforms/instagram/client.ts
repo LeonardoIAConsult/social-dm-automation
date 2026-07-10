@@ -2,7 +2,9 @@ import { env } from '../../config/env.js';
 import { logger } from '../../utils/logger.js';
 import type { OutgoingMessage } from '../../core/types.js';
 
-const BASE = () => `https://graph.facebook.com/${env.GRAPH_API_VERSION}`;
+// Instagram API con Instagram Login usa graph.instagram.com (NO graph.facebook.com).
+// Los tokens IGAA... solo son validos contra este host.
+const BASE = () => `https://graph.instagram.com/${env.GRAPH_API_VERSION}`;
 
 /**
  * Cliente delgado sobre el Graph API de Meta para Instagram.
