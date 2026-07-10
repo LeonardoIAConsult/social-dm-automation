@@ -7,6 +7,7 @@ import {
 } from '../store/conversationStore.js';
 import { captionCampaigns, getCampaign, matchCampaign, type Campaign } from './campaigns.js';
 import { extractKeywordFromCaption } from './keywordExtractor.js';
+import { matchesKeyword } from './textMatch.js';
 import { googleDrive, toDateFolderName } from '../integrations/googleDrive.js';
 import type { IncomingEvent, PlatformAdapter } from './types.js';
 
@@ -126,7 +127,7 @@ export class FlowEngine {
 
     const keyword = await this.resolveCaptionKeyword(adapter, event.mediaId);
     if (!keyword) return undefined;
-    if (!event.text.toUpperCase().includes(keyword)) return undefined;
+    if (!matchesKeyword(event.text, keyword)) return undefined;
 
     logger.info({ mediaId: event.mediaId, keyword }, 'Keyword derivada del copy del post');
     return candidates[0];

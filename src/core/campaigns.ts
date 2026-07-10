@@ -1,4 +1,5 @@
 import type { IncomingEventType, OutgoingMessage } from './types.js';
+import { matchesAnyKeyword } from './textMatch.js';
 
 /**
  * Una campana = un disparador + un follow-gate opcional + el valor a entregar.
@@ -138,13 +139,12 @@ export function matchCampaign(
   text: string | undefined,
   mediaId: string | undefined,
 ): Campaign | undefined {
-  const haystack = (text ?? '').toUpperCase();
   return campaigns.find((c) => {
     if ((c.trigger.mode ?? 'keywords') === 'caption') return false;
     if (!c.trigger.eventTypes.includes(eventType)) return false;
     if (c.trigger.mediaId && c.trigger.mediaId !== mediaId) return false;
     if (c.trigger.keywords.length === 0) return true;
-    return c.trigger.keywords.some((k) => haystack.includes(k.toUpperCase()));
+    return matchesAnyKeyword(text, c.trigger.keywords);
   });
 }
 
