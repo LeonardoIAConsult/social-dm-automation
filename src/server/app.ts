@@ -4,6 +4,7 @@ import { logger } from '../utils/logger.js';
 import type { FlowEngine } from '../core/flowEngine.js';
 import type { PlatformAdapter } from '../core/types.js';
 import { privacyHtml, termsHtml } from './legal.js';
+import { dbg, dbgRecent } from './debug.js';
 
 /** Request con el cuerpo crudo guardado para validar la firma HMAC. */
 interface RawRequest extends Request {
@@ -23,6 +24,9 @@ export function createApp(engine: FlowEngine, adapters: Map<string, PlatformAdap
   );
 
   app.get('/health', (_req, res) => res.json({ ok: true }));
+
+  // Diagnostico temporal: ultimos webhooks/errores registrados en memoria.
+  app.get('/debug/last', (_req, res) => res.json(dbgRecent()));
 
   // Paginas legales requeridas por Meta para publicar la app.
   app.get('/privacy', (_req, res) => res.type('html').send(privacyHtml));
@@ -50,6 +54,7 @@ export function createApp(engine: FlowEngine, adapters: Map<string, PlatformAdap
     try {
       adapter.verifySignature(raw, req.header('x-hub-signature-256'));
     } catch (err) {
+      dbg('firma_invalida', { msg: (err as Error).message });
       logger.warn({ err: (err as Error).message }, 'Firma invalida, se descarta el webhook');
       return res.sendStatus(403);
     }
@@ -59,10 +64,21 @@ export function createApp(engine: FlowEngine, adapters: Map<string, PlatformAdap
 
     try {
       const events = adapter.parseWebhook(req.body);
+      dbg('webhook_recibido', {
+        n: events.length,
+        events: events.map((e) => ({ type: e.type, text: e.text, user: e.user.id })),
+      });
       for (const event of events) {
-        await engine.handle(event);
+        try {
+          await engine.handle(event);
+          dbg('evento_ok', { type: event.type, text: event.text });
+        } catch (err) {
+          dbg('evento_error', { type: event.type, msg: (err as Error).message });
+          logger.error({ err }, 'Error procesando evento');
+        }
       }
     } catch (err) {
+      dbg('parse_error', { msg: (err as Error).message });
       logger.error({ err }, 'Error procesando webhook de Instagram');
     }
   });
