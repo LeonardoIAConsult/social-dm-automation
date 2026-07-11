@@ -43,6 +43,10 @@ export interface Campaign {
     welcome?: string;
     /** Texto del boton que la persona toca para recibir el valor (abre la ventana). */
     getLinkButtonTitle: string;
+    /** Welcome alternativo cuando el recurso es la agenda/Calendar (DM sin keyword). */
+    dmWelcome?: string;
+    /** Texto del boton para el flujo de agenda/Calendar. */
+    dmButtonTitle?: string;
     /** DM cuando la persona NO sigue todavia. */
     askToFollow: string;
     /** Texto del boton para reintentar tras seguir. */
@@ -96,6 +100,10 @@ export const campaigns: Campaign[] = [
         '¡Hola! Estoy muy feliz de que estés aquí, muchas gracias por tu interés 😊\n\n' +
         'Haz clic abajo y te enviaré el enlace en un momento ✨',
       getLinkButtonTitle: 'Obtener el enlace',
+      dmWelcome:
+        '¡Hola! Gracias por escribirme 🙌 Con gusto te ayudo.\n\n' +
+        'Haz clic abajo y agenda una cita conmigo en mi calendario 📅',
+      dmButtonTitle: 'Agendar mi cita',
       askToFollow:
         'Para enviártelo solo necesito que me sigas. Cuando ya me sigas, toca el botón 👇',
       followedButtonTitle: 'Ya te sigo ✅',
