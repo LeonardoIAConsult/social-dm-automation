@@ -21,18 +21,25 @@ export interface ResourceItem {
   url: string;
 }
 
+/** Resultado de parsear la hoja: mapa palabra->recurso + recurso por defecto de DM. */
+interface ParsedSheet {
+  map: Record<string, ResourceItem>;
+  /** Recurso para DMs sin palabra clave (fila con CTA "Escríbeme por DM"). */
+  dmDefault?: ResourceItem;
+}
+
 /** Respaldo local si no hay hoja configurada (edita o deja como ejemplo). */
-const fallbackTable: Record<string, ResourceItem> = {
-  guia: { text: '¡Listo! Aquí tienes tu guía 🎁', url: 'https://tu-dominio.com/guia.pdf' },
+const fallback: ParsedSheet = {
+  map: { guia: { text: '¡Listo! Aquí tienes tu guía 🎁', url: 'https://tu-dominio.com/guia.pdf' } },
 };
 
 const CACHE_TTL_MS = 60 * 1000;
-let cache: { at: number; map: Record<string, ResourceItem> } | null = null;
+let cache: { at: number; data: ParsedSheet } | null = null;
 
 /** Busca el recurso mapeado a una palabra clave (tolerante a tildes/mayusculas). */
 export async function getResource(keyword: string | null | undefined): Promise<ResourceItem | undefined> {
   if (!keyword) return undefined;
-  const map = await loadMap();
+  const { map } = await load();
   return map[normalize(keyword)];
 }
 
@@ -44,30 +51,37 @@ export async function findMatchingKeyword(
   text: string | null | undefined,
 ): Promise<string | undefined> {
   if (!text) return undefined;
-  const map = await loadMap();
+  const { map } = await load();
   return Object.keys(map).find((key) => matchesKeyword(text, key));
 }
 
-async function loadMap(): Promise<Record<string, ResourceItem>> {
+/** Recurso por defecto para un DM sin palabra clave (ej. link de agenda/Calendar). */
+export async function getDmDefault(): Promise<ResourceItem | undefined> {
+  return (await load()).dmDefault;
+}
+
+async function load(): Promise<ParsedSheet> {
   const now = Date.now();
-  if (cache && now - cache.at < CACHE_TTL_MS) return cache.map;
+  if (cache && now - cache.at < CACHE_TTL_MS) return cache.data;
 
   if (!env.RESOURCES_SHEET_CSV_URL) {
-    cache = { at: now, map: fallbackTable };
-    return fallbackTable;
+    cache = { at: now, data: fallback };
+    return fallback;
   }
 
   try {
     const res = await fetch(env.RESOURCES_SHEET_CSV_URL);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const map = parseSheet(await res.text());
-    cache = { at: now, map };
-    logger.info({ entries: Object.keys(map).length }, 'Hoja de recursos cargada');
-    return map;
+    const data = parseSheet(await res.text());
+    cache = { at: now, data };
+    logger.info(
+      { entries: Object.keys(data.map).length, dmDefault: Boolean(data.dmDefault) },
+      'Hoja de recursos cargada',
+    );
+    return data;
   } catch (err) {
     logger.error({ err }, 'No se pudo leer la hoja de recursos; uso respaldo/cache');
-    // Si ya habia cache, seguimos con ella; si no, respaldo local.
-    return cache?.map ?? fallbackTable;
+    return cache?.data ?? fallback;
   }
 }
 
@@ -80,9 +94,14 @@ async function loadMap(): Promise<Record<string, ResourceItem>> {
  *     se EXTRAE la palabra, y una columna de link (Link_Asset_Drive / link).
  * Asi puedes usar tu misma hoja de contenido sin columnas extra.
  */
-function parseSheet(csv: string): Record<string, ResourceItem> {
+/** True si el CTA es un llamado a escribir por DM (sin palabra a comentar). */
+function isDmCta(cta: string): boolean {
+  return /\b(por dm|por mensaje|escribeme|escribime|mandame un dm|mandame dm)\b/.test(normalize(cta));
+}
+
+function parseSheet(csv: string): ParsedSheet {
   const rows = parseCsv(csv);
-  if (rows.length < 2) return {};
+  if (rows.length < 2) return { map: {} };
 
   const header = rows[0]!.map((h) => normalize(h));
   const findExact = (names: string[]) => header.findIndex((h) => names.includes(h));
@@ -110,20 +129,26 @@ function parseSheet(csv: string): Record<string, ResourceItem> {
   const url = urlCol !== -1 ? urlCol : 1;
 
   const map: Record<string, ResourceItem> = {};
+  let dmDefault: ResourceItem | undefined;
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i]!;
     const rawKw = (row[kw] ?? '').trim();
     const link = (row[url] ?? '').trim();
     if (!rawKw || !link || !/^https?:\/\//i.test(link)) continue;
 
+    const message = txtCol >= 0 ? (row[txtCol] ?? '').trim() : '';
+    const item: ResourceItem = { url: link, ...(message ? { text: message } : {}) };
+
     const keyword = kwIsPhrase ? extractKeywordFromCaption(rawKw) : rawKw;
     const key = normalize(keyword ?? '');
-    if (!key) continue;
-
-    const message = txtCol >= 0 ? (row[txtCol] ?? '').trim() : '';
-    map[key] = { url: link, ...(message ? { text: message } : {}) };
+    if (key) {
+      map[key] = item;
+    } else if (kwIsPhrase && !dmDefault && isDmCta(rawKw)) {
+      // CTA "Escríbeme por DM" sin palabra -> recurso por defecto de los DMs.
+      dmDefault = item;
+    }
   }
-  return map;
+  return { map, dmDefault };
 }
 
 /** Parser CSV minimo (RFC4180: comillas, comas y saltos dentro de comillas). */
