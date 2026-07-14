@@ -24,6 +24,11 @@ const base = z.object({
   DRY_RUN: bool('false'),
   FOLLOW_GATE_ENABLED: bool('true'),
 
+  // Recurso por defecto (ej. agenda/Calendar) para DMs SIN palabra clave.
+  // OFF por defecto: un DM normal ("hola", una pregunta) NO recibe auto-respuesta.
+  // Ponlo en true solo si quieres que cada DM sin keyword reciba el link por defecto.
+  DM_DEFAULT_ENABLED: bool('false'),
+
   // Google Sheet publicada como CSV con el mapa palabra -> link (opcional).
   RESOURCES_SHEET_CSV_URL: z.string().default(''),
 
