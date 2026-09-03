@@ -1,0 +1,52 @@
+# Blueprint de Render. Al conectar el repo, Render lee esto y crea el servicio.
+# Los secretos (sync:false) se ponen a mano en el dashboard de Render, NO en git.
+services:
+  - type: web
+    name: social-dm-automation
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GRAPH_API_VERSION
+        value: v21.0
+      - key: FOLLOW_GATE_ENABLED
+        value: "true"
+      - key: DRY_RUN
+        value: "false"
+      - key: GDRIVE_ENABLED
+        value: "false"
+      # ── Secretos: se configuran en el dashboard de Render ──
+      - key: META_APP_SECRET
+        sync: false
+      - key: META_WEBHOOK_VERIFY_TOKEN
+        sync: false
+      - key: IG_ACCESS_TOKEN
+        sync: false
+      - key: IG_BUSINESS_ACCOUNT_ID
+        sync: false
+      - key: GDRIVE_ROOT_FOLDER_ID
+        sync: false
+      # Credenciales de la bandeja /inbox (Basic Auth) para la revision de Meta.
+      - key: INBOX_USER
+        sync: false
+      - key: INBOX_PASS
+        sync: false
+      # Backstop anti-ban: tope de envios/hora por cuenta (~200 de Meta). 0 = off.
+      - key: RATE_LIMIT_PER_HOUR
+        value: "180"
+      # Persistencia: 'postgres' blinda /inbox contra el disco efimero de Render.
+      # Poner STORE_BACKEND=postgres y pegar DATABASE_URL (Neon/Supabase) en el
+      # dashboard. Sin esto, el default sigue siendo 'memory'.
+      - key: STORE_BACKEND
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      # Cola de envios (gap #2): opt-in. Desacopla el webhook + reintenta fallos
+      # transitorios + requeue por rate-limit. Default off (envio sincrono).
+      - key: SEND_QUEUE_ENABLED
+        value: "false"

@@ -1,0 +1,29 @@
+node_modules/
+dist/
+*.log
+.env
+.env.local
+.env.*.local
+.DS_Store
+coverage/
+data/*.json
+data/*.tmp
+data/*.bak*
+!data/.gitkeep
+
+# Intermedios: nunca al repo, siempre regenerables
+.tmp/*
+!.tmp/.gitkeep
+
+# Credenciales OAuth (solo si un flujo las usa)
+credentials.json
+token.json
+
+# Binarios locales (cloudflared, etc.)
+.tools/
+
+# Kit de marca (privado, no se sube; el banner/diagrama van en docs/assets)
+brand/
+
+# Notas internas de proceso (no se publican; se conservan solo en local)
+private/
