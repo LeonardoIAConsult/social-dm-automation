@@ -34,21 +34,22 @@ Las palabras y los links salen de una **Google Sheet** que tú manejas — sin t
   <img src="docs/assets/como-funciona.png" alt="Cómo funciona InboxPilot" width="90%">
 </p>
 
-## Características
+## Por qué es potente
 
-- 🔌 **Directo a la API de Meta** (Instagram) — sin plataformas intermediarias.
-- 💬 **Comment-to-DM** con botón (patrón ManyChat) dentro de las ventanas de Meta.
-- 🔒 **Follow-gate**: entrega el recurso solo a quien te sigue (`is_user_follow_business`).
-- 📄 **Recursos desde Google Sheet**: palabra → link (PDF de Drive, web o YouTube). Editas la hoja, cambios en ~1 min.
-- 🧠 **Match robusto**: ignora tildes, mayúsculas, signos y palabras extra (`guía` = `GUIA` = `Guia!`).
-- 🛡️ Valida la firma `X-Hub-Signature-256` de cada webhook; evita reenvíos duplicados.
-- 🧩 **Arquitectura de adaptadores** — hoy Instagram; extensible a Facebook.
-- 💾 **Persistencia intercambiable** — memoria (dev), archivo JSON o **Postgres**, tras una misma interfaz `ConversationStore` (sin tocar el motor).
-- 🚦 **Rate-limit anti-ban** por cuenta (ventana deslizante) para no pasar el tope de Meta.
-- 🔁 **Cola de envíos con reintentos** (backoff + requeue por rate-limit) opcional, worker in-process.
-- 🏢 **Arquitectura multi-cuenta** — estado aislado por tenant (`accountId`).
-- 🧪 **Modo DRY_RUN** para probar todo el flujo sin credenciales.
-- ✅ **Tipado estricto + tests** (`node:test`), typecheck limpio.
+Cada capacidad, por el beneficio que te da:
+
+- 🔌 **No pagas intermediarios** — habla directo a la API de Meta (Instagram). Sin la mensualidad de ManyChat ni depender de nadie.
+- 💬 **Convierte comentarios en leads solo** — comment-to-DM con botón (patrón ManyChat), siempre dentro de las ventanas que Meta permite.
+- 🔒 **Hace crecer tus seguidores** — el follow-gate (`is_user_follow_business`) entrega el recurso solo a quien te sigue: para recibir, primero te sigue.
+- 📄 **Cambias campañas en ~1 minuto, sin programador** — palabra → link desde tu Google Sheet (PDF de Drive, web o YouTube). Editas la hoja y ya.
+- 🧠 **No pierdes un lead por un typo** — el match ignora tildes, mayúsculas, signos y palabras extra (`guía` = `GUIA` = `Guia!`).
+- 🛡️ **Nadie falsifica tus webhooks** — valida la firma `X-Hub-Signature-256` de cada evento y descarta reenvíos duplicados.
+- 🚦 **Protegido contra baneos** — rate-limit por cuenta (ventana deslizante) que respeta el tope de Meta.
+- 🔁 **No se te cae un envío** — cola con reintentos (backoff + requeue por rate-limit), worker in-process.
+- 🏢 **Manejas varias cuentas/marcas a la vez** — estado aislado por tenant (`accountId`).
+- 🧩 **Crece contigo** — arquitectura de adaptadores (hoy Instagram, mañana Facebook) y persistencia intercambiable (memoria, JSON o **Postgres**) tras una misma interfaz, sin tocar el motor.
+- 🧪 **Pruebas todo sin arriesgar nada** — modo DRY_RUN corre el flujo completo sin credenciales.
+- ✅ **Confiable de base** — TypeScript estricto + tests (`node:test`), typecheck limpio.
 
 ## Qué NO hace (a propósito)
 
