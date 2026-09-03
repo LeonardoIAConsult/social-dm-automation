@@ -64,8 +64,11 @@ Todo vive en tu **Google Sheet** de planeación (guía: [`docs/RESOURCES_SHEET.m
 
 | CTA (columna) | Recurso_DM (columna) |
 |---|---|
-| Comenta **AUTOMATIZA** → DM | https://tu-web.com/articulo |
-| Comenta **GUIA** → DM | https://drive.google.com/…/guia.pdf |
+| Comenta **AUTOMATIZA** → DM | `https://tu-sitio.com/tu-articulo` |
+| Comenta **GUIA** → DM | `https://drive.google.com/…/tu-guia.pdf` |
+
+> ⚠️ Los enlaces de la tabla son **ejemplos del formato** — no son reales y por eso no
+> abren nada. Reemplázalos por tus propios links en tu Google Sheet.
 
 El sistema saca la **palabra** del CTA y el **link** de `Recurso_DM`. Agregas filas = agregas campañas.
 

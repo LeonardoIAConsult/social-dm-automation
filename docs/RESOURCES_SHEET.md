@@ -8,9 +8,12 @@ Nueva Google Sheet con **3 columnas** (fila de encabezado exactamente así):
 
 | palabra | link | mensaje |
 |---|---|---|
-| GUIA | https://drive.google.com/....../guia.pdf | ¡Listo! Aquí tienes tu guía 🎁 |
-| AUTOMATIZA | https://tusitio.com/articulo | Aquí está el artículo 👇 |
-| VER MAS | https://youtu.be/xxxx | Míralo aquí 🎥 |
+| GUIA | `https://drive.google.com/…/tu-guia.pdf` | ¡Listo! Aquí tienes tu guía 🎁 |
+| AUTOMATIZA | `https://tu-sitio.com/tu-articulo` | Aquí está el artículo 👇 |
+| VER MAS | `https://youtu.be/tu-video` | Míralo aquí 🎥 |
+
+> ⚠️ Los enlaces de arriba son **ejemplos del formato** (no reales, no abren nada).
+> Pon tus propios links en tu hoja.
 
 - **palabra**: lo que la gente comenta (y lo que pones en el copy del post como CTA).
   Puedes tener **muchas** filas. No importan tildes/mayúsculas: "guía", "GUIA", "Guia" = igual.
