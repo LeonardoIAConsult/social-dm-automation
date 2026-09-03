@@ -20,4 +20,9 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run typecheck
+      # DRY_RUN=true: los tests no necesitan credenciales reales de Meta; env.ts
+      # salta la validacion de credenciales en este modo (mismo camino que el
+      # desarrollo local sin .env). Sin esto, los modulos que importan env crashean.
       - run: npm test
+        env:
+          DRY_RUN: 'true'
