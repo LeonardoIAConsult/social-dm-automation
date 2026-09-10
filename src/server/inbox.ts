@@ -61,6 +61,14 @@ export function renderInboxHtml(states: ConversationState[]): string {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<!--
+  Auto-refresh. The App Review screencast has to show an inbound message appear
+  in this thread right after the test recipient replies in the native Instagram
+  client. Refreshing by hand mid-take looks staged; this updates on its own, so
+  the whole journey fits in one continuous recording. Plain HTML: the site's
+  content security policy blocks scripts.
+-->
+<meta http-equiv="refresh" content="5" />
 <title>Inbox — LeoDMsBot</title>
 <style>
   :root { color-scheme: light dark; }
@@ -86,7 +94,8 @@ export function renderInboxHtml(states: ConversationState[]): string {
 <body>
 <header class="top">
   <h1>Inbox — LeoDMsBot</h1>
-  <p>Instagram conversations handled by the app (inbound &amp; outbound), grouped by user.</p>
+  <p>Instagram conversations handled by the app (inbound &amp; outbound), grouped by user.
+  This page refreshes automatically every 5 seconds.</p>
 </header>
 <main>
   ${rows || '<p class="empty">No conversations yet.</p>'}
