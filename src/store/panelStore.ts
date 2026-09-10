@@ -171,6 +171,8 @@ export interface PanelStore {
   deleteCampaign(accountId: string, id: string): Promise<void>;
 
   recordEvent(event: Omit<FunnelEvent, 'id'>): Promise<FunnelEvent>;
+  /** El evento mas reciente de ese tipo, o undefined si nunca paso. */
+  ultimoEvento(accountId: string, tipo: FunnelEventType): Promise<FunnelEvent | undefined>;
   /** Eventos de la cuenta desde un momento dado, del mas viejo al mas nuevo. */
   eventsSince(accountId: string, sinceMs: number): Promise<FunnelEvent[]>;
 }
@@ -384,6 +386,14 @@ export class InMemoryPanelStore implements PanelStore {
       if (primero !== undefined) this.events.delete(primero);
     }
     return stored;
+  }
+
+  async ultimoEvento(accountId: string, tipo: FunnelEventType): Promise<FunnelEvent | undefined> {
+    let ultimo: FunnelEvent | undefined;
+    for (const e of this.events.values()) {
+      if (e.accountId === accountId && e.type === tipo && (!ultimo || e.at > ultimo.at)) ultimo = e;
+    }
+    return ultimo;
   }
 
   async eventsSince(accountId: string, sinceMs: number): Promise<FunnelEvent[]> {
@@ -800,6 +810,18 @@ export class PostgresPanelStore implements PanelStore {
       ],
     );
     return toEvent(required(rows, 'el evento'));
+  }
+
+  async ultimoEvento(accountId: string, tipo: FunnelEventType): Promise<FunnelEvent | undefined> {
+    // Se apoya en el indice (account_id, at DESC): trae una fila, no la tabla.
+    const { rows } = await this.db.query<EventRow>(
+      `SELECT * FROM panel_events
+       WHERE account_id = $1 AND type = $2
+       ORDER BY at DESC
+       LIMIT 1`,
+      [accountId, tipo],
+    );
+    return rows[0] ? toEvent(rows[0]) : undefined;
   }
 
   async eventsSince(accountId: string, sinceMs: number): Promise<FunnelEvent[]> {

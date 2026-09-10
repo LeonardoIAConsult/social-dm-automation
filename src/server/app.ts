@@ -7,6 +7,7 @@ import type { ConversationStore } from '../store/conversationStore.js';
 import { dataDeletionHtml, privacyHtml, termsHtml } from './legal.js';
 import { registrarRutasDelPanel } from './panel.js';
 import { mensajeDelPanel } from './panel/vista.js';
+import { AvisadorPorLog, AvisadorUnaVezAlDia } from '../core/avisos.js';
 import type { PanelStore } from '../store/panelStore.js';
 import { DEFAULT_ACCOUNT_ID } from '../core/account.js';
 import { basicAuthOk, renderInboxHtml } from './inbox.js';
@@ -78,7 +79,14 @@ export function createApp(
 
   // Panel del cliente: detras de bandera. Apagado, la app sirve exactamente lo
   // mismo que antes y estas rutas no existen.
-  if (env.PANEL_ENABLED && panel) registrarRutasDelPanel(app, panel);
+  if (env.PANEL_ENABLED && panel) {
+    registrarRutasDelPanel(
+      app,
+      panel,
+      adapters.get('instagram') as unknown as Parameters<typeof registrarRutasDelPanel>[2],
+      new AvisadorUnaVezAlDia(new AvisadorPorLog()),
+    );
+  }
 
   // ── Bandeja de conversaciones (/inbox) ────────────────────────────────
   // UI read-only que muestra los mensajes entrantes y salientes por usuario.

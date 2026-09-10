@@ -7,6 +7,47 @@ import type { OutgoingMessage } from '../../core/types.js';
 const BASE = () => `https://graph.instagram.com/${env.GRAPH_API_VERSION}`;
 
 /**
+ * Estado de la conexion de la cuenta, en los tres unicos desenlaces que el
+ * cliente necesita distinguir para pintar su semaforo. Se separa
+ * 'sin-permiso' de 'no-se-pudo' porque el primero exige que el cliente vuelva
+ * a conectar su cuenta y el segundo solo pide esperar: mezclarlos manda a
+ * reconectar a alguien que no tiene nada roto.
+ */
+export type SaludDeCuenta =
+  | { estado: 'ok'; username?: string }
+  | { estado: 'sin-permiso' }
+  | { estado: 'no-se-pudo' };
+
+/** Forma del error que devuelve Meta cuando rechaza una llamada. */
+interface ErrorDeMeta {
+  code?: number;
+  type?: string;
+  error_subcode?: number;
+  message?: string;
+}
+
+/**
+ * Meta contesta 400 casi para todo, asi que el HTTP solo no alcanza para saber
+ * si el token murio. La senal real esta en el codigo: 190 (token invalido o
+ * vencido), 102 (sesion caida), 10 y la familia 200-299 (permiso denegado).
+ * Cualquier otro fallo se trata como transitorio a proposito: preferimos pedir
+ * que reintenten antes que mandar a reconectar por un hipo de la red.
+ */
+function esFaltaDePermiso(status: number, error: ErrorDeMeta | undefined): boolean {
+  // Meta caido nunca es culpa del token, aunque etiquete el error como OAuth
+  // (sus 5xx genericos vienen con type OAuthException y code 1 o 2).
+  if (status >= 500) return false;
+  const code = error?.code;
+  if (typeof code === 'number') {
+    if (code === 190 || code === 102 || code === 10) return true;
+    if (code >= 200 && code <= 299) return true;
+    return false; // un codigo conocido que NO es de OAuth (ej. 4, tope de peticiones)
+  }
+  // Sin codigo con que decidir: el type de OAuth, y si tampoco, el 401 pelado.
+  return error?.type === 'OAuthException' || status === 401;
+}
+
+/**
  * Cliente delgado sobre el Graph API de Meta para Instagram.
  * Documentacion: developers.facebook.com/docs/instagram-platform
  */
@@ -146,6 +187,35 @@ export class InstagramClient {
     } catch (err) {
       logger.error({ err }, 'Error obteniendo timestamp de media');
       return null;
+    }
+  }
+
+  /**
+   * Estado de la conexion de la cuenta del negocio, para el semaforo del panel.
+   * Lo llama una pantalla, asi que NUNCA lanza: cualquier tropiezo sale como
+   * 'no-se-pudo' antes que dejar el panel en blanco con un error sin traducir.
+   */
+  async salud(): Promise<SaludDeCuenta> {
+    if (env.DRY_RUN) {
+      logger.info('🧪 [DRY_RUN] salud de cuenta simulada');
+      return { estado: 'ok', username: 'cuenta_de_prueba' };
+    }
+    try {
+      const url = new URL(`${BASE()}/${this.igId}`);
+      url.searchParams.set('fields', 'id,username');
+      url.searchParams.set('access_token', this.token);
+      const res = await fetch(url, { method: 'GET' });
+      // Un 5xx suele venir en HTML: parsear aparte para que reviente aqui y no
+      // se confunda con una respuesta de Meta que si dice algo.
+      const json = (await res.json()) as { username?: string; error?: ErrorDeMeta };
+      if (res.ok && !json.error) return { estado: 'ok', username: json.username };
+      logger.warn({ status: res.status, error: json.error }, 'salud de cuenta fallo');
+      return esFaltaDePermiso(res.status, json.error)
+        ? { estado: 'sin-permiso' }
+        : { estado: 'no-se-pudo' };
+    } catch (err) {
+      logger.error({ err }, 'Error consultando salud de la cuenta');
+      return { estado: 'no-se-pudo' };
     }
   }
 

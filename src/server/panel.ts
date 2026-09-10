@@ -5,7 +5,23 @@ import { logger } from '../utils/logger.js';
 import type { PanelStore } from '../store/panelStore.js';
 import { esc } from './html.js';
 import { asincrono } from './app.js';
-import { mensajeDelPanel, paginaDelPanel, renderPanel } from './panel/vista.js';
+import {
+  mensajeDelPanel,
+  paginaDelPanel,
+  renderEditorDeCampana,
+  renderPanel,
+  renderCuentasDelOperador,
+  renderPruebaEnVivo,
+} from './panel/vista.js';
+import { revisarEnlace } from '../core/enlaces.js';
+import { armarEstadoDeConexion, type ConSalud } from './panel/estado.js';
+import {
+  DURACION_DE_LA_PRUEBA_MS,
+  estadoDeLaPrueba,
+  resumenDe,
+} from './panel/resultados.js';
+import { avisadorMudo, type Avisador } from '../core/avisos.js';
+import { DuplicateKeywordError, type PanelCampaign } from '../store/panelStore.js';
 import {
   SESSION_TTL_MS,
   cerrarSesion,
@@ -39,7 +55,14 @@ async function abrirSesion(res: Response, panel: PanelStore, userId: string): Pr
   ponerCookieDeSesion(res, session);
 }
 
-export function registrarRutasDelPanel(app: Express, panel: PanelStore): void {
+export function registrarRutasDelPanel(
+  app: Express,
+  panel: PanelStore,
+  /** Para preguntar si la cuenta sigue conectada. Sin el, el semaforo dice "revisando". */
+  adapter?: ConSalud,
+  /** Avisa al operador cuando una cuenta deja de responder. */
+  avisador: Avisador = avisadorMudo,
+): void {
   // Solo para los formularios del panel. El webhook sigue con su parser propio.
   const formulario = express.urlencoded({ extended: false, limit: '4kb' });
 
@@ -128,6 +151,201 @@ export function registrarRutasDelPanel(app: Express, panel: PanelStore): void {
   );
 
   /**
+   * El cliente pide que le reconecten la cuenta. No lo puede hacer solo: el
+   * permiso lo renueva quien administra la app de Meta.
+   */
+  app.get(
+    '/panel/reconectar',
+    asincrono(async (req: Request, res: Response) => {
+      const permiso = await cuentaDeLaSesion(req, panel);
+      if (permiso === 'sin-sesion') return res.status(401).type('html').send(paginaSinSesion());
+      if (permiso === 'sin-cuenta') return res.status(404).type('html').send(paginaSinCuenta());
+
+      await avisador.avisar({
+        accountId: permiso.accountId,
+        asunto: 'cuenta-desconectada',
+        detalle: `El cliente de ${permiso.accountId} pidio que le reconecten su Instagram.`,
+      });
+
+      return res.type('html').send(
+        mensajeDelPanel(
+          'Ya avisamos',
+          'Ya avisamos',
+          'Le avisamos a quien administra tu cuenta para que vuelva a conectar tu Instagram. Mientras tanto, tus publicaciones siguen ahí: en cuanto se reconecte, los mensajes se reanudan.',
+          { texto: 'Volver a mi panel', url: '/panel' },
+        ),
+      );
+    }),
+  );
+
+  /**
+   * La lista de cuentas de quien maneja varias. No hace falta un rol especial:
+   * se listan exactamente las cuentas a las que esa persona tiene acceso, asi
+   * que un cliente con una sola cuenta ve una sola.
+   */
+  app.get(
+    '/panel/cuentas',
+    asincrono(async (req: Request, res: Response) => {
+      const permiso = await cuentaDeLaSesion(req, panel);
+      if (permiso === 'sin-sesion') return res.status(401).type('html').send(paginaSinSesion());
+      if (permiso === 'sin-cuenta') return res.status(404).type('html').send(paginaSinCuenta());
+
+      const cuentas = [];
+      for (const acceso of permiso.todas) {
+        const conexion = await armarEstadoDeConexion(adapter, panel, acceso.accountId);
+        const entrega = await panel.ultimoEvento(acceso.accountId, 'resource_delivered');
+        cuentas.push({
+          accountId: acceso.accountId,
+          conexion,
+          ultimaEntrega: entrega ? new Date(entrega.at) : undefined,
+        });
+      }
+      return res.type('html').send(renderCuentasDelOperador(cuentas));
+    }),
+  );
+
+  /**
+   * Prueba en vivo. La ventana arranca cuando el cliente entra sin `desde`, y
+   * la pagina se refresca sola mientras dura.
+   */
+  app.get(
+    '/panel/prueba',
+    asincrono(async (req: Request, res: Response) => {
+      const permiso = await cuentaDeLaSesion(req, panel);
+      if (permiso === 'sin-sesion') return res.status(401).type('html').send(paginaSinSesion());
+      if (permiso === 'sin-cuenta') return res.status(404).type('html').send(paginaSinCuenta());
+
+      const desdeCrudo = Number(req.query.desde);
+      // Sin `desde` (o con basura) arranca una ventana nueva ahora mismo.
+      if (!Number.isFinite(desdeCrudo) || desdeCrudo <= 0) {
+        return res.redirect(303, `/panel/prueba?desde=${Date.now()}`);
+      }
+      // Cota: una ventana no puede empezar en el pasado remoto y mostrar
+      // actividad vieja como si fuera de la prueba.
+      const desde = Math.max(desdeCrudo, Date.now() - DURACION_DE_LA_PRUEBA_MS);
+
+      const campanas = await panel.campaignsOf(permiso.accountId);
+      const estado = await estadoDeLaPrueba(panel, permiso.accountId, desde);
+      return res.type('html').send(
+        renderPruebaEnVivo({
+          palabra: campanas[0]?.keyword ?? 'tu palabra clave',
+          ...estado,
+        }),
+      );
+    }),
+  );
+
+  /** Editor de la campana: que palabra entrega que. */
+  app.get(
+    '/panel/campana',
+    asincrono(async (req: Request, res: Response) => {
+      const permiso = await cuentaDeLaSesion(req, panel);
+      if (permiso === 'sin-sesion') return res.status(401).type('html').send(paginaSinSesion());
+      if (permiso === 'sin-cuenta') return res.status(404).type('html').send(paginaSinCuenta());
+
+      const suyas = await panel.campaignsOf(permiso.accountId);
+      const actual = suyas[0];
+      return res.type('html').send(
+        renderEditorDeCampana({
+          palabra: actual?.keyword ?? '',
+          enlace: actual?.url ?? '',
+          mensaje: actual?.message ?? '',
+          // Por defecto encendido: el follow-gate es la razon de ser del producto.
+          exigirSeguir: actual ? actual.requireFollow : true,
+          origen: suyas.length > 0 ? 'panel' : 'hoja',
+        }),
+      );
+    }),
+  );
+
+  app.post(
+    '/panel/campana',
+    formulario,
+    asincrono(async (req: Request, res: Response) => {
+      const permiso = await cuentaDeLaSesion(req, panel);
+      if (permiso === 'sin-sesion') return res.status(401).type('html').send(paginaSinSesion());
+      if (permiso === 'sin-cuenta') return res.status(404).type('html').send(paginaSinCuenta());
+
+      const cuerpo = (req.body ?? {}) as Record<string, unknown>;
+      const texto = (clave: string, tope: number) =>
+        typeof cuerpo[clave] === 'string' ? (cuerpo[clave] as string).trim().slice(0, tope) : '';
+      const palabra = texto('palabra', 40);
+      const enlace = texto('enlace', 500);
+      const mensaje = texto('mensaje', 280);
+      const exigirSeguir = cuerpo.exigirSeguir === 'si';
+      const soloVerPrevia = cuerpo.accion === 'previa';
+
+      const suyas = await panel.campaignsOf(permiso.accountId);
+      const actual: PanelCampaign | undefined = suyas[0];
+      const base = {
+        palabra,
+        enlace,
+        mensaje,
+        exigirSeguir,
+        origen: (suyas.length > 0 ? 'panel' : 'hoja') as 'panel' | 'hoja',
+      };
+
+      // "Ver como queda" no guarda: es para mirar el mensaje antes de decidir.
+      if (soloVerPrevia) {
+        return res.type('html').send(renderEditorDeCampana(base));
+      }
+
+      if (!palabra) {
+        return res.status(400).type('html').send(
+          renderEditorDeCampana({
+            ...base,
+            problema: {
+              que: 'Falta la palabra que la gente va a comentar.',
+              comoArreglarlo: 'Escribe una sola palabra, corta y fácil de recordar.',
+            },
+          }),
+        );
+      }
+
+      const revision = await revisarEnlace(enlace);
+      if (revision.veredicto === 'no-sirve') {
+        return res.status(400).type('html').send(
+          renderEditorDeCampana({
+            ...base,
+            problema: { que: revision.motivo, comoArreglarlo: revision.comoArreglarlo },
+          }),
+        );
+      }
+
+      try {
+        await panel.saveCampaign({
+          id: actual?.id,
+          accountId: permiso.accountId,
+          keyword: palabra,
+          url: enlace,
+          message: mensaje || undefined,
+          requireFollow: exigirSeguir,
+        });
+      } catch (err) {
+        if (err instanceof DuplicateKeywordError) {
+          return res.status(409).type('html').send(
+            renderEditorDeCampana({
+              ...base,
+              problema: {
+                que: `Ya tienes otra campaña usando la palabra "${palabra}".`,
+                comoArreglarlo: 'Elige una palabra distinta para no confundir a quien comenta.',
+              },
+            }),
+          );
+        }
+        throw err;
+      }
+
+      const suave =
+        revision.veredicto === 'no-pudimos-revisar'
+          ? ` Ojo: ${revision.motivo} Guardamos igual, pero ábrelo tú para confirmarlo.`
+          : '';
+      logger.info({ account: permiso.accountId }, 'Panel: campana guardada');
+      return res.redirect(303, `/panel?guardado=1${suave ? '&revisar=1' : ''}`);
+    }),
+  );
+
+  /**
    * El panel. Aqui solo confirma quien entro y a que cuenta llega; la Tarea 5 le
    * pone el semaforo, la prueba en vivo y el resto.
    */
@@ -144,14 +362,35 @@ export function registrarRutasDelPanel(app: Express, panel: PanelStore): void {
       return res.status(404).type('html').send(paginaSinCuenta());
     }
 
-    // El semaforo real (consultar a Meta y la ultima entrega) llega en la Tarea 6;
-    // aqui el cascaron ya sabe pintar los tres estados.
+    const suyas = await panel.campaignsOf(permiso.accountId);
+    const actual = suyas[0];
+    const dias = req.query.dias === '30' ? 30 : 7;
+    const aviso =
+      req.query.guardado === '1'
+        ? req.query.revisar === '1'
+          ? 'Guardamos tus cambios. No pudimos abrir el enlace desde aquí: ábrelo tú para confirmar que funciona.'
+          : 'Guardamos tus cambios. Ya están activos.'
+        : undefined;
+
+    const conexion = await armarEstadoDeConexion(adapter, panel, permiso.accountId);
+    if (conexion.tipo === 'atencion') {
+      // El cliente no puede reconectar solo: alguien tiene que enterarse HOY.
+      await avisador.avisar({
+        accountId: permiso.accountId,
+        asunto: 'cuenta-desconectada',
+        detalle: `La cuenta ${permiso.accountId} perdio el permiso de Instagram y no esta respondiendo.`,
+      });
+    }
+
     return res.type('html').send(
       renderPanel({
         cuenta: permiso.accountId,
-        conexion: { tipo: 'sin-datos' },
-        campana: 'pendiente',
-        resultados: 'pendiente',
+        cuantasCuentas: permiso.todas.length,
+        conexion,
+        campana: actual ? { palabra: actual.keyword, enlace: actual.url } : 'pendiente',
+        resultados: await resumenDe(panel, permiso.accountId, dias),
+        dias,
+        aviso,
       }),
     );
     }),

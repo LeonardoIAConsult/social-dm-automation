@@ -20,7 +20,7 @@ import { matchesKeyword } from './textMatch.js';
 import { NoopRateLimiter, type RateLimiter } from './rateLimiter.js';
 import type { SendQueue } from './sendQueue.js';
 import { DEFAULT_ACCOUNT_ID, type AccountRegistry } from './account.js';
-import { getResource, findMatchingKeyword, getDmDefault } from './resources.js';
+import { FuenteHoja, type FuenteDeRecursos } from './recursos.js';
 import { googleDrive, toDateFolderName } from '../integrations/googleDrive.js';
 import type { IncomingEvent, PlatformAdapter } from './types.js';
 
@@ -78,6 +78,11 @@ export class FlowEngine {
      * que es el comportamiento de siempre.
      */
     private readonly accounts?: AccountRegistry,
+    /**
+     * De donde salen palabra y recurso. Sin fuente, se lee la hoja como siempre:
+     * inyectarla es lo que hace que el panel pueda mandar.
+     */
+    private readonly recursos: FuenteDeRecursos = new FuenteHoja(),
   ) {}
 
   /**
@@ -207,7 +212,7 @@ export class FlowEngine {
         return;
       }
 
-      const campaign = await this.resolveCampaign(adapter, state, event);
+      const campaign = await this.resolveCampaign(adapter, state, event, cuenta);
       if (!campaign) {
         logger.debug({ type: event.type, text: event.text }, 'Sin campana que haga match');
         return;
@@ -285,6 +290,7 @@ export class FlowEngine {
     adapter: PlatformAdapter,
     state: ConversationState,
     event: IncomingEvent,
+    cuenta: string,
   ): Promise<Campaign | undefined> {
     const direct = matchCampaign(event.type, event.text, event.mediaId);
     if (direct) {
@@ -298,16 +304,23 @@ export class FlowEngine {
     // Modo 'sheet': el comentario/DM matchea cualquier palabra de la hoja.
     const sheets = sheetCampaigns(event.type);
     if (sheets.length > 0) {
-      const kw = event.text ? await findMatchingKeyword(event.text) : undefined;
-      if (kw) {
-        state.data.matchedKeyword = kw;
-        logger.info({ keyword: kw }, 'Palabra de la hoja detectada');
+      const hallado = event.text ? await this.recursos.buscar(cuenta, event.text) : undefined;
+      if (hallado) {
+        state.data.matchedKeyword = hallado.palabra;
+        // Se recuerda si esa campana exige seguir, porque el gate corre despues,
+        // en otro webhook (cuando la persona toca el boton).
+        state.data.exigirSeguir = hallado.exigirSeguir;
+        logger.info({ keyword: hallado.palabra }, 'Palabra detectada');
         return sheets[0];
       }
       // DM sin palabra clave -> recurso por defecto (ej. link de agenda/Calendar),
       // definido en la fila con CTA "Escríbeme por DM". Opt-in: apagado por
       // defecto para no auto-responder a cada DM normal (conversaciones, dudas).
-      if (env.DM_DEFAULT_ENABLED && event.type === 'message' && (await getDmDefault())) {
+      if (
+        env.DM_DEFAULT_ENABLED &&
+        event.type === 'message' &&
+        (await this.recursos.porDefecto(cuenta))
+      ) {
         state.data.matchedKeyword = DM_DEFAULT;
         logger.info('DM sin keyword -> recurso por defecto');
         return sheets[0];
@@ -348,7 +361,11 @@ export class FlowEngine {
     state: ConversationState,
     campaign: Campaign,
   ): Promise<void> {
-    const gateOn = env.FOLLOW_GATE_ENABLED && campaign.requireFollow;
+    // Si la campana viene del panel, manda lo que el cliente eligio ahi; si no,
+    // lo que dice la campana del codigo. El interruptor global sigue por encima.
+    const exigeLaCampana =
+      typeof state.data.exigirSeguir === 'boolean' ? state.data.exigirSeguir : campaign.requireFollow;
+    const gateOn = env.FOLLOW_GATE_ENABLED && exigeLaCampana;
 
     if (gateOn) {
       const follows = await this.checkFollow(adapter, state);
@@ -440,13 +457,19 @@ export class FlowEngine {
     campaign: Campaign,
   ): Promise<boolean> {
     if (!campaign.deliverFromKeyword) return false;
+    const cuenta = state.accountId ?? this.accountId;
     const kw = typeof state.data.matchedKeyword === 'string' ? state.data.matchedKeyword : undefined;
-    const res = kw === DM_DEFAULT ? await getDmDefault() : await getResource(kw);
+    const res =
+      kw === DM_DEFAULT
+        ? await this.recursos.porDefecto(cuenta)
+        : kw
+          ? await this.recursos.porPalabra(cuenta, kw)
+          : undefined;
     if (!res) {
       logger.warn({ keyword: kw }, 'Sin recurso mapeado para la keyword (revisa la hoja)');
       return false;
     }
-    if (res.text) await this.safeSend(adapter, state, { kind: 'text', text: res.text });
+    if (res.texto) await this.safeSend(adapter, state, { kind: 'text', text: res.texto });
     return await this.safeSend(adapter, state, { kind: 'text', text: res.url });
   }
 

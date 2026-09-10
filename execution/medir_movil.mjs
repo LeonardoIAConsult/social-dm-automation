@@ -81,6 +81,9 @@ await pagina.click('button[type=submit]');
 await pagina.waitForURL('**/panel');
 todoBien = (await medir('panel', '/panel')) && todoBien;
 todoBien = (await medir('sin-sesion', '/panel/salir-inexistente')) && todoBien;
+todoBien = (await medir('campana', '/panel/campana')) && todoBien;
+todoBien = (await medir('prueba', '/panel/prueba')) && todoBien;
+todoBien = (await medir('cuentas', '/panel/cuentas')) && todoBien;
 
 // Texto visible del panel, para revisar que no haya jerga.
 await pagina.goto(BASE + '/panel');

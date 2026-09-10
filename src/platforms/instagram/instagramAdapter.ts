@@ -3,7 +3,7 @@ import type {
   OutgoingMessage,
   PlatformAdapter,
 } from '../../core/types.js';
-import { InstagramClient } from './client.js';
+import { InstagramClient, type SaludDeCuenta } from './client.js';
 import { parseInstagramWebhook } from './webhookParser.js';
 import { verifyInstagramSignature } from './signature.js';
 
@@ -40,5 +40,14 @@ export class InstagramAdapter implements PlatformAdapter {
 
   async getMediaTimestamp(mediaId: string): Promise<number | null> {
     return this.client.getMediaTimestamp(mediaId);
+  }
+
+  /**
+   * Estado de la conexion para el semaforo del panel. Va como extra del
+   * adaptador (no como parte del contrato) porque no toda red lo expone: quien
+   * lo consuma pregunta si el metodo existe, igual que con el caption.
+   */
+  async salud(): Promise<SaludDeCuenta> {
+    return this.client.salud();
   }
 }

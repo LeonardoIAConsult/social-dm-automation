@@ -83,10 +83,17 @@ test('cuando algo se rompe, lo dice en llano y da UN boton', async () => {
   assert.match(html, /Hay algo que arreglar/);
   assert.match(html, /Tu Instagram se desconectó/);
   assert.match(html, /Reconectar Instagram/);
+  // REGLA AFINADA (Tarea 7): ahora el bloque de la campana tambien tiene su
+  // accion, asi que la regla se mide donde importa: dentro del bloque de estado
+  // hay UNA sola accion, para que quien ve el problema no tenga que elegir.
+  const bloqueDeEstado = html.slice(
+    html.indexOf('Hay algo que arreglar'),
+    html.indexOf('Tu palabra clave'),
+  );
   assert.equal(
-    (html.match(/class="boton"/g) ?? []).length,
+    (bloqueDeEstado.match(/class="boton"/g) ?? []).length,
     1,
-    'una sola accion principal, para que no haya que elegir',
+    'el bloque del problema ofrece una sola salida',
   );
 });
 

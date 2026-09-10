@@ -15,6 +15,7 @@ import {
   type PanelStore,
 } from './store/panelStore.js';
 import { StoreFunnelRecorder } from './core/funnel.js';
+import { FuentePanelPrimero } from './core/recursos.js';
 import { InstagramAdapter } from './platforms/instagram/instagramAdapter.js';
 import {
   NoopRateLimiter,
@@ -117,6 +118,8 @@ async function main(): Promise<void> {
     accounts.primary()?.id ?? DEFAULT_ACCOUNT_ID,
     new StoreFunnelRecorder(panel),
     accounts,
+    // El panel manda si la cuenta tiene campanas ahi; si no, la hoja de siempre.
+    new FuentePanelPrimero(panel),
   );
   const app = createApp(
     engine,
