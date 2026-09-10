@@ -11,6 +11,10 @@ export function parseInstagramWebhook(body: unknown): IncomingEvent[] {
   if (payload?.object !== 'instagram' || !Array.isArray(payload.entry)) return events;
 
   for (const entry of payload.entry) {
+    // A quien le llego. En mensajeria viene por mensaje (`recipient.id`); en
+    // comentarios, la cuenta es la propia `entry.id`.
+    const cuentaDeLaEntrada = entry.id;
+
     // Rama 1: mensajeria (DMs, quick replies, postbacks, story replies).
     for (const m of entry.messaging ?? []) {
       const senderId = m.sender?.id;
@@ -23,6 +27,7 @@ export function parseInstagramWebhook(body: unknown): IncomingEvent[] {
           type: 'postback',
           user: { id: senderId },
           payload: m.postback.payload,
+          recipientId: m.recipient?.id ?? cuentaDeLaEntrada,
           timestamp,
           raw: m,
         });
@@ -38,6 +43,7 @@ export function parseInstagramWebhook(body: unknown): IncomingEvent[] {
             user: { id: senderId },
             payload: m.message.quick_reply.payload,
             text: m.message.text,
+            recipientId: m.recipient?.id ?? cuentaDeLaEntrada,
             timestamp,
             raw: m,
           });
@@ -48,6 +54,7 @@ export function parseInstagramWebhook(body: unknown): IncomingEvent[] {
           type: m.message.reply_to?.story ? 'story_reply' : 'message',
           user: { id: senderId },
           text: m.message.text,
+          recipientId: m.recipient?.id ?? cuentaDeLaEntrada,
           timestamp,
           raw: m,
         });
@@ -66,6 +73,7 @@ export function parseInstagramWebhook(body: unknown): IncomingEvent[] {
         text: v.text,
         commentId: v.id,
         mediaId: v.media?.id,
+        recipientId: cuentaDeLaEntrada,
         timestamp: entry.time ?? Date.now(),
         raw: change,
       });

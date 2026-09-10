@@ -9,9 +9,16 @@
  * Uso:
  *   node execution/simulate_webhook.mjs comment "quiero la GUIA"
  *   node execution/simulate_webhook.mjs message "GUIA"
- *   node execution/simulate_webhook.mjs follow-check freebie-guia
+ *   node execution/simulate_webhook.mjs get-link default
+ *   node execution/simulate_webhook.mjs follow-check default
  *
- * Variables (opcional): PORT, META_APP_SECRET, SIM_USER, SIM_MEDIA
+ * El recorrido completo (comentario -> boton -> entrega) son dos llamadas:
+ *   node execution/simulate_webhook.mjs comment "quiero la GUIA"
+ *   node execution/simulate_webhook.mjs get-link default
+ *
+ * Variables (opcional): PORT, META_APP_SECRET, SIM_USER, SIM_MEDIA,
+ * SIM_COMMENT_ID (fija el id del comentario, para simular que Meta reenvia el
+ * MISMO webhook y comprobar que no se cuenta dos veces).
  */
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -33,7 +40,10 @@ const SECRET = process.env.META_APP_SECRET || 'dev-app-secret';
 const USER = process.env.SIM_USER || 'SIM_USER_123';
 const MEDIA = process.env.SIM_MEDIA || 'SIM_MEDIA_456';
 
-const [kind = 'comment', arg = 'quiero la GUIA'] = process.argv.slice(2);
+const [kind = 'comment', argRaw] = process.argv.slice(2);
+// Los tipos que reciben una CAMPANA no pueden heredar el texto de ejemplo.
+const DEFAULT_ARG = { 'follow-check': 'default', 'get-link': 'default' };
+const arg = argRaw ?? DEFAULT_ARG[kind] ?? 'quiero la GUIA';
 const now = Date.now();
 
 function body() {
@@ -49,7 +59,7 @@ function body() {
               {
                 field: 'comments',
                 value: {
-                  id: 'COMMENT_' + now,
+                  id: process.env.SIM_COMMENT_ID || 'COMMENT_' + now,
                   text: arg,
                   from: { id: USER, username: 'usuario_prueba' },
                   media: { id: MEDIA },
@@ -72,6 +82,21 @@ function body() {
           },
         ],
       };
+    case 'get-link':
+      // Simula el click en "Obtener el enlace": es lo que abre la ventana de 24h
+      // y dispara el follow-gate y la entrega.
+      return {
+        object: 'instagram',
+        entry: [
+          {
+            id: 'IG_BIZ',
+            time: now,
+            messaging: [
+              { sender: { id: USER }, recipient: { id: 'IG_BIZ' }, timestamp: now, message: { mid: 'm_' + now, text: 'Obtener el enlace', quick_reply: { payload: 'GET_LINK:' + arg } } },
+            ],
+          },
+        ],
+      };
     case 'follow-check':
       // Simula el click en "Ya te sigo" (quick reply) de la campana `arg`.
       return {
@@ -87,7 +112,7 @@ function body() {
         ],
       };
     default:
-      console.error(`Tipo desconocido: ${kind}. Usa comment | message | follow-check`);
+      console.error(`Tipo desconocido: ${kind}. Usa comment | message | get-link | follow-check`);
       process.exit(1);
   }
 }

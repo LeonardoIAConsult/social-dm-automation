@@ -35,6 +35,12 @@ export interface IncomingEvent {
   commentId?: string;
   /** ID del media (post/reel) donde ocurrio el comentario. */
   mediaId?: string;
+  /**
+   * Id de la cuenta de negocio de la plataforma que RECIBIO el evento. Es lo
+   * que permite saber de que cliente es cuando hay mas de uno suscrito al mismo
+   * webhook. Sin esto, todo cae en la cuenta primaria.
+   */
+  recipientId?: string;
   /** Epoch ms del evento segun la plataforma. */
   timestamp: number;
   /** Objeto crudo original, por si un flujo necesita algo especifico. */
