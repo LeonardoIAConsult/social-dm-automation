@@ -57,6 +57,13 @@ const base = z.object({
   // Bandeja de conversaciones (/inbox), protegida con Basic Auth. Si ambas
   // quedan vacias, la bandeja responde 503 (deshabilitada) para no exponer
   // conversaciones sin autenticacion.
+  /**
+   * Clave con la que se firma la cookie de sesion del panel. Cambiarla cierra
+   * todas las sesiones abiertas (util si sospechas que se filtro).
+   */
+  SESSION_SECRET: z.string().default(''),
+  /** Enciende las rutas del panel del cliente. Apagado = la app va como siempre. */
+  PANEL_ENABLED: bool('false'),
   INBOX_USER: z.string().default(''),
   INBOX_PASS: z.string().default(''),
 
@@ -102,6 +109,25 @@ const base = z.object({
 });
 
 const schema = base.superRefine((val, ctx) => {
+  // El panel no puede servirse con una firma de sesion vacia: sin secreto,
+  // cualquiera se fabrica una cookie valida.
+  if (val.PANEL_ENABLED && val.SESSION_SECRET.trim().length < 32) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['SESSION_SECRET'],
+      message: 'obligatorio (min 32 caracteres) cuando PANEL_ENABLED=true',
+    });
+  }
+  // El panel con almacen en memoria es una trampa: en Render el contenedor se
+  // duerme y reinicia, asi que cada reinicio borra sesiones e invitaciones y el
+  // cliente aparece afuera con un enlace que ya no existe.
+  if (val.PANEL_ENABLED && val.NODE_ENV === 'production' && val.STORE_BACKEND !== 'postgres') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['STORE_BACKEND'],
+      message: 'el panel en produccion exige STORE_BACKEND=postgres (en memoria se pierde todo)',
+    });
+  }
   // El backend postgres exige DATABASE_URL (aplica incluso en DRY_RUN).
   if (val.STORE_BACKEND === 'postgres' && val.DATABASE_URL.trim() === '') {
     ctx.addIssue({

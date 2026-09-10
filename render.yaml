@@ -48,5 +48,13 @@ services:
         sync: false
       # Cola de envios (gap #2): opt-in. Desacopla el webhook + reintenta fallos
       # transitorios + requeue por rate-limit. Default off (envio sincrono).
+      # Panel del cliente. Apagado por defecto. Al encenderlo, el arranque EXIGE
+      # STORE_BACKEND=postgres (en memoria se pierden sesiones e invitaciones en
+      # cada reinicio del contenedor) y un SESSION_SECRET de 32+ caracteres:
+      #   node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+      - key: PANEL_ENABLED
+        value: false
+      - key: SESSION_SECRET
+        sync: false
       - key: SEND_QUEUE_ENABLED
         value: "false"

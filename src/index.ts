@@ -9,6 +9,12 @@ import {
   PostgresConversationStore,
   type ConversationStore,
 } from './store/conversationStore.js';
+import {
+  InMemoryPanelStore,
+  PostgresPanelStore,
+  type PanelStore,
+} from './store/panelStore.js';
+import { StoreFunnelRecorder } from './core/funnel.js';
 import { InstagramAdapter } from './platforms/instagram/instagramAdapter.js';
 import {
   NoopRateLimiter,
@@ -32,7 +38,15 @@ import type { PlatformAdapter } from './core/types.js';
  * Para sumar otra red, se instancia su adaptador y se agrega al Map.
  */
 /** Construye el store segun el backend. Postgres necesita init async (crear tabla). */
-async function buildStore(): Promise<ConversationStore> {
+/**
+ * Arma los dos almacenes. Con Postgres comparten un solo pool: son la misma
+ * base, abrir dos juegos de conexiones no aporta nada y en el plan Free las
+ * conexiones son un recurso escaso.
+ *
+ * El almacen del panel SIEMPRE existe; sin Postgres es en memoria (sirve para
+ * desarrollo y no sobrevive reinicios, que esta bien para eso).
+ */
+async function buildStores(): Promise<{ store: ConversationStore; panel: PanelStore }> {
   if (env.STORE_BACKEND === 'postgres') {
     // TLS: por defecto VERIFICAMOS el certificado del servidor (Neon/Supabase
     // usan certs de CA publica -> funciona). Solo si tu Postgres usa cert
@@ -44,10 +58,15 @@ async function buildStore(): Promise<ConversationStore> {
     });
     const store = new PostgresConversationStore(pool);
     await store.init();
-    return store;
+    const panel = new PostgresPanelStore(pool);
+    await panel.init();
+    return { store, panel };
   }
-  if (env.STORE_BACKEND === 'file') return new FileConversationStore(env.STORE_FILE_PATH);
-  return new InMemoryConversationStore();
+  const panel = new InMemoryPanelStore();
+  if (env.STORE_BACKEND === 'file') {
+    return { store: new FileConversationStore(env.STORE_FILE_PATH), panel };
+  }
+  return { store: new InMemoryConversationStore(), panel };
 }
 
 /**
@@ -67,7 +86,7 @@ function buildAccountRegistry(): AccountRegistry {
 }
 
 async function main(): Promise<void> {
-  const store = await buildStore();
+  const { store, panel } = await buildStores();
   const accounts = buildAccountRegistry();
 
   const adapters = new Map<string, PlatformAdapter>();
@@ -96,8 +115,16 @@ async function main(): Promise<void> {
     engineRateLimiter,
     sendQueue,
     accounts.primary()?.id ?? DEFAULT_ACCOUNT_ID,
+    new StoreFunnelRecorder(panel),
+    accounts,
   );
-  const app = createApp(engine, adapters, store);
+  const app = createApp(
+    engine,
+    adapters,
+    store,
+    panel,
+    accounts.primary()?.id ?? DEFAULT_ACCOUNT_ID,
+  );
 
   app.listen(env.PORT, () => {
     logger.info(`🚀 Servidor escuchando en http://localhost:${env.PORT}`);
@@ -112,6 +139,7 @@ async function main(): Promise<void> {
     logger.info(
       `   Cola de envios: ${env.SEND_QUEUE_ENABLED ? `ON (max ${env.SEND_QUEUE_MAX_ATTEMPTS} intentos)` : 'OFF'}`,
     );
+    logger.info(`   Panel: ${env.PANEL_ENABLED ? 'ON' : 'OFF'} (${env.STORE_BACKEND === 'postgres' ? 'postgres' : 'memoria'})`);
     logger.info(`   Cuentas (tenants): ${accounts.all().length}`);
   });
 }

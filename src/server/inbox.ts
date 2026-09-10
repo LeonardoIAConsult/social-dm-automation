@@ -1,5 +1,6 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import type { ConversationState } from '../store/conversationStore.js';
+import { esc } from './html.js';
 
 /**
  * Compara dos strings en tiempo constante (evita timing attacks).
@@ -13,14 +14,6 @@ function safeStrEqual(a: string, b: string): boolean {
 }
 
 /** Escapa texto para insertarlo seguro en HTML. */
-function esc(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
 
 function fmtTime(ms: number): string {
   // ISO corto (UTC) — determinista y legible en la revision.

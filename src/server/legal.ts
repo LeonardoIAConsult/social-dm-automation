@@ -65,3 +65,42 @@ ininterrumpida.</p>
 <h2>3. Contacto</h2>
 <p>Para cualquier consulta, usa el correo de contacto de esta página.</p>`,
 );
+
+/**
+ * Instrucciones de eliminacion de datos. Meta la exige como URL propia en la
+ * configuracion de la app (antes apuntaba a facebook.com, que no explicaba
+ * nada). Se sirve en /data-deletion.
+ */
+export const dataDeletionHtml = page(
+  'Cómo eliminar tus datos',
+  `<h1>Cómo eliminar tus datos</h1>
+<small>Última actualización: 10 de septiembre de 2026</small>
+<p>Si escribiste a esta cuenta de Instagram o comentaste en una publicación, la App guardó lo
+mínimo para poder responderte: tu identificador de usuario de Instagram, tu nombre de usuario y
+los mensajes de esa conversación. Puedes pedir que se borre todo eso cuando quieras, sin dar
+explicaciones y sin costo.</p>
+
+<h2>Cómo pedirlo</h2>
+<ol>
+<li>Escribe a <a href="mailto:${CONTACT_EMAIL}">${CONTACT_EMAIL}</a> desde cualquier correo.</li>
+<li>Pon en el asunto <strong>Eliminar mis datos</strong>.</li>
+<li>Dinos tu usuario de Instagram (por ejemplo <em>@tu_usuario</em>), que es lo que nos permite
+encontrar tu conversación.</li>
+</ol>
+<p>También puedes pedirlo por mensaje directo desde la misma cuenta de Instagram con la que
+interactuaste. Es la forma más rápida, porque tu identificador viene con el mensaje.</p>
+
+<h2>Qué pasa después</h2>
+<ul>
+<li>Se borra tu conversación completa: identificador, nombre de usuario, mensajes enviados y
+recibidos, y el registro de si recibiste el recurso.</li>
+<li>El plazo máximo es de <strong>30 días</strong>, y normalmente ocurre en menos de 72 horas.</li>
+<li>Te confirmamos por el mismo medio por el que lo pediste.</li>
+<li>Si vuelves a escribir después, se crea una conversación nueva desde cero.</li>
+</ul>
+
+<h2>Lo que no podemos borrar</h2>
+<p>Los mensajes que ves dentro de tu propia aplicación de Instagram los guarda Meta, no nosotros.
+Para eliminarlos, bórralos desde Instagram o gestiona tus datos en la configuración de tu cuenta
+de Meta.</p>`,
+);
