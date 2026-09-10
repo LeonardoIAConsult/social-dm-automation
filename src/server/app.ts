@@ -6,6 +6,7 @@ import type { PlatformAdapter } from '../core/types.js';
 import type { ConversationStore } from '../store/conversationStore.js';
 import { dataDeletionHtml, privacyHtml, termsHtml } from './legal.js';
 import { registrarRutasDelPanel } from './panel.js';
+import { mensajeDelPanel } from './panel/vista.js';
 import type { PanelStore } from '../store/panelStore.js';
 import { DEFAULT_ACCOUNT_ID } from '../core/account.js';
 import { basicAuthOk, renderInboxHtml } from './inbox.js';
@@ -139,6 +140,21 @@ export function createApp(
       }
     }),
   );
+
+  // Direccion que no existe. Sin esto, el cliente que toca un enlace viejo o con
+  // un typo ve la pagina cruda del servidor, sin estilo y a medio traducir.
+  app.use((_req, res) => {
+    res
+      .status(404)
+      .type('html')
+      .send(
+        mensajeDelPanel(
+          'No encontramos esa página',
+          'No encontramos esa página',
+          'Puede que el enlace esté incompleto o sea viejo. Vuelve a abrir el que te enviaron.',
+        ),
+      );
+  });
 
   // Red de seguridad: Express 4 no atrapa el rechazo de un handler async, y una
   // promesa rechazada sin dueno mata el proceso de Node. Sin esto, un fallo

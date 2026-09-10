@@ -5,6 +5,7 @@ import { logger } from '../utils/logger.js';
 import type { PanelStore } from '../store/panelStore.js';
 import { esc } from './html.js';
 import { asincrono } from './app.js';
+import { mensajeDelPanel, paginaDelPanel, renderPanel } from './panel/vista.js';
 import {
   SESSION_TTL_MS,
   cerrarSesion,
@@ -33,24 +34,6 @@ import { cuentaDeLaSesion } from './authz.js';
  * a `abrirSesion`: el resto del panel no se entera de por donde llego la persona.
  */
 
-/** Pagina simple en el estilo llano del panel. La Tarea 5 le pone la cara definitiva. */
-function pagina(titulo: string, cuerpo: string): string {
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(titulo)}</title>
-<style>
- body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:560px;
- margin:0 auto;padding:24px 20px;line-height:1.6;color:#1a1a1a;background:#f7f8fa}
- .tarjeta{background:#fff;border:1px solid #e3e6ea;border-radius:12px;padding:20px;margin-top:16px}
- h1{font-size:1.4rem;margin:0 0 8px}
- p{margin:8px 0}
- button{margin-top:12px;padding:12px 18px;background:#0d1b2a;color:#fff;border:0;
- border-radius:8px;font-size:1rem;cursor:pointer}
- button.suave{background:#eceff3;color:#1a1a1a}
- small{color:#5b6570}
-</style></head><body>${cuerpo}</body></html>`;
-}
-
 async function abrirSesion(res: Response, panel: PanelStore, userId: string): Promise<void> {
   const session = await panel.createSession(userId, SESSION_TTL_MS);
   ponerCookieDeSesion(res, session);
@@ -68,16 +51,18 @@ export function registrarRutasDelPanel(app: Express, panel: PanelStore): void {
     const token = typeof req.query.t === 'string' ? req.query.t : '';
     if (!token) return res.status(400).type('html').send(paginaEnlaceInvalido());
     return res.type('html').send(
-      pagina(
+      paginaDelPanel(
         'Entrar a tu panel',
-        `<div class="tarjeta">
-           <h1>Entra a tu panel</h1>
-           <p>Toca el botón para abrir tu panel en este teléfono. No necesitas clave.</p>
+        `<header class="marca"><span class="nombre">InboxPilot</span></header>
+         <section class="tarjeta">
+           <p class="estado">Entra a tu panel</p>
+           <p class="detalle">Toca el botón para abrir tu panel en este teléfono. No necesitas
+           clave: queda abierto aquí.</p>
            <form method="POST" action="/panel/entrar">
              <input type="hidden" name="t" value="${esc(token)}">
-             <button type="submit">Entrar a mi panel</button>
+             <button class="boton" type="submit">Entrar a mi panel</button>
            </form>
-         </div>`,
+         </section>`,
       ),
     );
   });
@@ -133,10 +118,10 @@ export function registrarRutasDelPanel(app: Express, panel: PanelStore): void {
     asincrono(async (req: Request, res: Response) => {
       await cerrarSesion(req, res, panel);
       return res.type('html').send(
-        pagina(
+        mensajeDelPanel(
           'Sesión cerrada',
-          `<div class="tarjeta"><h1>Cerraste sesión</h1>
-           <p>Ya saliste del panel. Para volver a entrar usa el enlace que te enviaron.</p></div>`,
+          'Cerraste sesión',
+          'Ya saliste del panel. Para volver a entrar usa el enlace que te enviaron.',
         ),
       );
     }),
@@ -159,52 +144,40 @@ export function registrarRutasDelPanel(app: Express, panel: PanelStore): void {
       return res.status(404).type('html').send(paginaSinCuenta());
     }
 
-    const lista = permiso.todas
-      .map((c) => `<li>${esc(c.accountId)} <small>(${esc(c.role)})</small></li>`)
-      .join('');
-
+    // El semaforo real (consultar a Meta y la ultima entrega) llega en la Tarea 6;
+    // aqui el cascaron ya sabe pintar los tres estados.
     return res.type('html').send(
-      pagina(
-        'Tu panel',
-        `<div class="tarjeta">
-           <h1>Ya estás dentro</h1>
-           <p>Tu sesión quedó abierta en este teléfono. No tienes que recordar ninguna clave.</p>
-           <p><strong>Tus cuentas:</strong></p>
-           <ul>${lista}</ul>
-           <p><small>Aquí van a aparecer el estado de tu automatización, la prueba en vivo y tus
-           resultados.</small></p>
-           <form method="POST" action="/panel/salir">
-             <button class="suave" type="submit">Cerrar sesión</button>
-             </form>
-           </div>`,
-        ),
-      );
+      renderPanel({
+        cuenta: permiso.accountId,
+        conexion: { tipo: 'sin-datos' },
+        campana: 'pendiente',
+        resultados: 'pendiente',
+      }),
+    );
     }),
   );
 }
 
 function paginaEnlaceInvalido(): string {
-  return pagina(
+  return mensajeDelPanel(
     'Enlace no válido',
-    `<div class="tarjeta"><h1>Este enlace ya no sirve</h1>
-     <p>Puede que se haya usado antes o que haya vencido. Pídele a quien te lo envió que te
-     genere uno nuevo.</p></div>`,
+    'Este enlace ya no sirve',
+    'Puede que se haya usado antes o que haya vencido. Pídele a quien te lo envió que te genere uno nuevo.',
   );
 }
 
 function paginaSinCuenta(): string {
-  return pagina(
+  return mensajeDelPanel(
     'No encontramos esa cuenta',
-    `<div class="tarjeta"><h1>No encontramos esa cuenta</h1>
-     <p>Puede que el enlace apunte a una cuenta que ya no está disponible. Escríbele a quien te
-     dio el acceso.</p></div>`,
+    'No encontramos esa cuenta',
+    'Puede que el enlace apunte a una cuenta que ya no está disponible. Escríbele a quien te dio el acceso.',
   );
 }
 
 function paginaSinSesion(): string {
-  return pagina(
+  return mensajeDelPanel(
     'Necesitas entrar',
-    `<div class="tarjeta"><h1>Necesitas entrar</h1>
-     <p>Abre el enlace que te enviaron para entrar a tu panel.</p></div>`,
+    'Necesitas entrar',
+    'Abre el enlace que te enviaron para entrar a tu panel.',
   );
 }
