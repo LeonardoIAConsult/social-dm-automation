@@ -11,7 +11,7 @@
     "smoke": "none",
     "sensible": "src/server/auth.ts, src/server/panel.ts, src/server/app.ts, src/store/**, src/config/env.ts, src/platforms/instagram/signature.ts, execution/invite.ts"
   },
-  "startedAt": "2026-09-10T20:14:38.924Z",
+  "startedAt": "2026-09-10T20:38:18.483Z",
   "steps": [
     {
       "step": "build",
@@ -19,7 +19,7 @@
       "skipped": false,
       "ok": true,
       "code": 0,
-      "ms": 2952,
+      "ms": 3795,
       "tail": "> social-dm-automation@0.1.0 build\n> tsc -p tsconfig.json",
       "lines": 2
     },
@@ -38,7 +38,7 @@
       "skipped": false,
       "ok": true,
       "code": 0,
-      "ms": 2809,
+      "ms": 3300,
       "tail": "> social-dm-automation@0.1.0 typecheck\n> tsc -p tsconfig.json --noEmit",
       "lines": 2
     },
@@ -48,11 +48,11 @@
       "skipped": false,
       "ok": true,
       "code": 0,
-      "ms": 4601,
-      "tail": "[15:14:48] \u001b[32mINFO\u001b[39m (23172): \u001b[36m🧪 [DRY_RUN] envio simulado (no se llama al Graph API)\u001b[39m\n    to: \"ig-user-e2e\"\n    message: {\n      \"kind\": \"private_reply\",\n      \"commentId\": \"COMMENT_REPETIDO\",\n      \"text\": \"¡Hola! Estoy muy feliz de que estés aquí, muchas gracias por tu interés 😊\\n\\nHaz clic abajo y te enviaré el enlace en un momento ✨\",\n      \"buttons\": [\n        {\n          \"title\": \"Obtener el enlace\",\n          \"payload\": \"GET_LINK:default\"\n        }\n      ]\n    }\n✔ si Meta reenvia el MISMO comentario, no se cuenta dos veces (466.0127ms)\n[15:14:48] \u001b[33mWARN\u001b[39m (23172): \u001b[36mFirma invalida, se descarta el webhook\u001b[39m\n    err: \"Firma de webhook invalida\"\n✔ un webhook con firma invalida se descarta y no ensucia el embudo (337.8135ms)\nℹ tests 180\nℹ suites 0\nℹ pass 180\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 3484.1455",
+      "ms": 4649,
+      "tail": "[15:38:29] \u001b[32mINFO\u001b[39m (26100): \u001b[36m🧪 [DRY_RUN] envio simulado (no se llama al Graph API)\u001b[39m\n    to: \"ig-user-e2e\"\n    message: {\n      \"kind\": \"private_reply\",\n      \"commentId\": \"COMMENT_REPETIDO\",\n      \"text\": \"¡Hola! Estoy muy feliz de que estés aquí, muchas gracias por tu interés 😊\\n\\nHaz clic abajo y te enviaré el enlace en un momento ✨\",\n      \"buttons\": [\n        {\n          \"title\": \"Obtener el enlace\",\n          \"payload\": \"GET_LINK:default\"\n        }\n      ]\n    }\n✔ si Meta reenvia el MISMO comentario, no se cuenta dos veces (463.2221ms)\n[15:38:29] \u001b[33mWARN\u001b[39m (26100): \u001b[36mFirma invalida, se descarta el webhook\u001b[39m\n    err: \"Firma de webhook invalida\"\n✔ un webhook con firma invalida se descarta y no ensucia el embudo (326.4133ms)\nℹ tests 180\nℹ suites 0\nℹ pass 180\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 3516.0524",
       "lines": 628
     }
   ],
   "verdict": "GO",
-  "finishedAt": "2026-09-10T20:14:49.289Z"
+  "finishedAt": "2026-09-10T20:38:30.230Z"
 }

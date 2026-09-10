@@ -44,90 +44,180 @@ export interface DatosDelPanel {
 
 const ESTILOS = `
  :root{
-   --tinta:#14181f; --tinta-suave:#5b6570; --linea:#e4e7ec; --fondo:#f6f7f9;
-   --papel:#ffffff; --acento:#0d1b2a; --verde:#0f8a4a; --ambar:#b45309; --gris:#8a919b;
+   /* Paleta de InboxPilot (brand/MANUAL_DE_MARCA.pdf y los SVG del logo). */
+   --tinta:#1B1523; --tinta-2:#3A3050; --tinta-suave:#6E6480;
+   --linea:#E7E3EE; --fondo:#F7F5FA; --papel:#FFFFFF;
+   --morado:#833AB4; --rosa:#E1306C; --naranja:#F77737;
+   --verde:#0F8A4A; --ambar:#B45309; --gris:#B4ACC8;
+   --degradado:linear-gradient(120deg,#833AB4 0%,#E1306C 52%,#F77737 100%);
+   --sombra:0 1px 2px rgba(27,21,35,.05), 0 8px 24px -12px rgba(27,21,35,.18);
  }
  *{box-sizing:border-box}
  body{margin:0;background:var(--fondo);color:var(--tinta);
-   font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-   font-size:16px;line-height:1.55;-webkit-text-size-adjust:100%}
- .envoltura{max-width:560px;margin:0 auto;padding:16px 16px 48px}
- header.marca{display:flex;align-items:center;justify-content:space-between;gap:12px;
-   padding:14px 0 6px}
- header.marca .nombre{font-weight:700;letter-spacing:-.01em}
- header.marca .cuenta{color:var(--tinta-suave);font-size:.85rem;
-   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:52%}
- .tarjeta{background:var(--papel);border:1px solid var(--linea);border-radius:14px;
-   padding:18px;margin-top:14px}
- .tarjeta h2{margin:0 0 4px;font-size:1rem;letter-spacing:-.01em}
- .semaforo{display:flex;gap:12px;align-items:flex-start}
- .punto{flex:0 0 auto;width:14px;height:14px;border-radius:50%;margin-top:6px}
- .punto.activo{background:var(--verde);box-shadow:0 0 0 4px rgba(15,138,74,.14)}
- .punto.atencion{background:var(--ambar);box-shadow:0 0 0 4px rgba(180,83,9,.14)}
- .punto.sin-datos{background:var(--gris);box-shadow:0 0 0 4px rgba(138,145,155,.14)}
- .estado{font-size:1.12rem;font-weight:650;letter-spacing:-.01em;margin:0}
- .detalle{margin:2px 0 0;color:var(--tinta-suave);font-size:.92rem}
- .boton{display:block;width:100%;margin-top:14px;padding:14px 18px;border:0;
-   border-radius:10px;background:var(--acento);color:#fff;font-size:1rem;font-weight:600;
-   text-align:center;text-decoration:none;cursor:pointer}
- .boton.suave{background:transparent;color:var(--tinta-suave);border:1px solid var(--linea);
-   font-weight:500}
- .pendiente{color:var(--tinta-suave);font-size:.92rem;margin:6px 0 0}
- .cifras{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
- .cifra{background:var(--fondo);border-radius:10px;padding:10px;text-align:center}
- .cifra b{display:block;font-size:1.4rem;letter-spacing:-.02em}
- .cifra span{display:block;color:var(--tinta-suave);font-size:.76rem;line-height:1.25}
- .aviso{background:#eef6ff;border:1px solid #cfe3ff;border-radius:12px;padding:12px 14px;
-   margin-top:14px;font-size:.94rem}
- .pie{margin-top:24px}
- label{display:block;font-weight:600;font-size:.92rem;margin-top:14px}
+   font-family:"Lato",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+   font-size:16px;line-height:1.55;-webkit-text-size-adjust:100%;
+   -webkit-font-smoothing:antialiased}
+ .envoltura{max-width:560px;margin:0 auto;padding:14px 16px 48px}
+
+ /* ── Cabecera de marca ─────────────────────────────────────────────── */
+ header.marca{display:flex;align-items:center;justify-content:space-between;
+   gap:12px;padding:10px 0 4px}
+ .marca .lockup{display:flex;align-items:center;gap:9px;min-width:0}
+ .marca .lockup svg{flex:0 0 auto;display:block;border-radius:8px}
+ .marca .nombre{font-weight:900;font-size:1.06rem;letter-spacing:-.02em;
+   white-space:nowrap}
+ .marca .nombre .pilot{background:var(--degradado);-webkit-background-clip:text;
+   background-clip:text;color:transparent}
+ .marca .cuenta{color:var(--tinta-suave);font-size:.84rem;text-decoration:none;
+   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:44%}
+ .marca a.cuenta{border-bottom:1px solid var(--linea)}
+
+ /* ── Tarjetas ──────────────────────────────────────────────────────── */
+ .tarjeta{background:var(--papel);border:1px solid var(--linea);border-radius:16px;
+   padding:18px;margin-top:14px;box-shadow:var(--sombra)}
+ .tarjeta h2{margin:0 0 2px;font-size:.82rem;font-weight:800;letter-spacing:.06em;
+   text-transform:uppercase;color:var(--tinta-suave)}
+
+ /* ── Semaforo ──────────────────────────────────────────────────────── */
+ .semaforo{display:flex;gap:13px;align-items:flex-start}
+ .punto{flex:0 0 auto;width:12px;height:12px;border-radius:50%;margin-top:9px}
+ .punto.activo{background:var(--verde);box-shadow:0 0 0 5px rgba(15,138,74,.13)}
+ .punto.atencion{background:var(--ambar);box-shadow:0 0 0 5px rgba(180,83,9,.13)}
+ .punto.sin-datos{background:var(--gris);box-shadow:0 0 0 5px rgba(180,172,200,.22)}
+ .estado{font-size:1.3rem;font-weight:800;letter-spacing:-.03em;margin:0;
+   line-height:1.25}
+ .detalle{margin:4px 0 0;color:var(--tinta-suave);font-size:.93rem}
+
+ /* ── Acciones ──────────────────────────────────────────────────────── */
+ .boton{display:block;width:100%;margin-top:16px;padding:14px 18px;border:0;
+   border-radius:12px;background:var(--degradado);color:#fff;font-size:1rem;
+   font-weight:800;letter-spacing:-.01em;text-align:center;text-decoration:none;
+   cursor:pointer;font-family:inherit;
+   box-shadow:0 6px 16px -8px rgba(225,48,108,.7)}
+ .boton:active{transform:translateY(1px)}
+ .boton.suave{background:var(--papel);color:var(--tinta-2);
+   border:1px solid var(--linea);font-weight:700;box-shadow:none}
+ .pendiente{color:var(--tinta-suave);font-size:.93rem;margin:8px 0 0}
+
+ /* ── Cifras ────────────────────────────────────────────────────────── */
+ .cifras{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+ .cifra{background:var(--fondo);border-radius:12px;padding:12px 10px;text-align:center}
+ .cifra b{display:block;font-size:1.8rem;font-weight:900;letter-spacing:-.045em;
+   line-height:1.05}
+ .cifra.destacada b{background:var(--degradado);-webkit-background-clip:text;
+   background-clip:text;color:transparent}
+ .cifra span{display:block;color:var(--tinta-suave);font-size:.74rem;
+   line-height:1.3;margin-top:3px}
+
+ /* ── Avisos ────────────────────────────────────────────────────────── */
+ .aviso{background:#F4EFFA;border:1px solid #E3D8F2;border-radius:13px;
+   padding:12px 14px;margin-top:14px;font-size:.93rem;color:var(--tinta-2)}
+ .error{background:#FFF3F5;border:1px solid #FBD5DE;border-radius:13px;
+   padding:12px 14px;margin-top:14px;font-size:.93rem;color:var(--tinta-2)}
+ .error b{display:block;margin-bottom:2px;color:var(--tinta)}
+ .listo{background:#EFFAF3;border:1px solid #CBEBD8;border-radius:13px;
+   padding:12px 14px;margin-top:14px;font-size:.95rem;color:var(--tinta-2)}
+ .fuente{color:var(--tinta-suave);font-size:.82rem;margin-top:12px}
+ .pie{margin-top:22px}
+
+ /* ── Formulario ────────────────────────────────────────────────────── */
+ label{display:block;font-weight:800;font-size:.92rem;margin-top:16px}
  .ayuda{display:block;font-weight:400;color:var(--tinta-suave);font-size:.85rem;
-   margin-top:2px}
- input[type=text],input[type=url]{width:100%;margin-top:6px;padding:12px 14px;font-size:16px;
-   border:1px solid var(--linea);border-radius:10px;background:var(--papel);color:var(--tinta);
-   font-family:inherit}
- input:focus{outline:2px solid var(--acento);outline-offset:1px}
- .interruptor{display:flex;align-items:flex-start;gap:10px;margin-top:16px}
- .interruptor input{margin-top:3px;width:20px;height:20px;flex:0 0 auto}
+   margin-top:3px}
+ input[type=text],input[type=url]{width:100%;margin-top:7px;padding:13px 14px;
+   font-size:16px;border:1px solid var(--linea);border-radius:12px;
+   background:var(--papel);color:var(--tinta);font-family:inherit}
+ input::placeholder{color:var(--gris)}
+ input:focus{outline:0;border-color:var(--rosa);
+   box-shadow:0 0 0 3px rgba(225,48,108,.14)}
+ .interruptor{display:flex;align-items:flex-start;gap:11px;margin-top:18px;
+   background:var(--fondo);border-radius:12px;padding:13px}
+ .interruptor input{margin-top:2px;width:20px;height:20px;flex:0 0 auto;
+   accent-color:var(--rosa)}
  .interruptor span{font-size:.94rem}
- .error{background:#fff4f2;border:1px solid #ffd4cc;border-radius:12px;padding:12px 14px;
-   margin-top:14px;font-size:.94rem}
- .error b{display:block;margin-bottom:2px}
- .dm{background:#f0f2f5;border-radius:14px;padding:14px;margin-top:10px}
- .dm .globo{background:var(--papel);border-radius:14px;padding:12px 14px;font-size:.95rem;
-   white-space:pre-wrap;word-break:break-word}
- .dm .boton-dm{margin-top:8px;background:var(--papel);border:1px solid var(--linea);
-   border-radius:10px;padding:10px;text-align:center;font-weight:600;font-size:.92rem;
-   color:#0d6efd}
- .dm .quien{color:var(--tinta-suave);font-size:.78rem;margin:0 0 6px}
- .fuente{color:var(--tinta-suave);font-size:.82rem;margin-top:10px}
- ol.pasos{list-style:none;margin:14px 0 0;padding:0}
- ol.pasos li{display:flex;gap:10px;align-items:flex-start;padding:9px 0;
-   border-top:1px solid var(--linea)}
- ol.pasos li:first-child{border-top:0}
- ol.pasos .marca{flex:0 0 auto;width:22px;height:22px;border-radius:50%;
-   border:2px solid var(--linea);display:flex;align-items:center;justify-content:center;
-   font-size:.8rem;color:var(--tinta-suave)}
- ol.pasos li.hecho .marca{background:var(--verde);border-color:var(--verde);color:#fff}
- ol.pasos li.hecho .que{font-weight:600}
- ol.pasos .que{font-size:.96rem}
- ol.pasos .cuando{display:block;color:var(--tinta-suave);font-size:.8rem}
- .cuenta-regresiva{color:var(--tinta-suave);font-size:.85rem;margin-top:12px}
- .listo{background:#eefaf1;border:1px solid #c9ecd6;border-radius:12px;padding:12px 14px;
-   margin-top:14px;font-size:.95rem}
- .periodo{display:flex;gap:8px;margin-top:2px}
- .periodo a{flex:1;text-align:center;padding:8px;border:1px solid var(--linea);
-   border-radius:8px;text-decoration:none;color:var(--tinta-suave);font-size:.86rem}
- .periodo a.activo{background:var(--acento);color:#fff;border-color:var(--acento)}
- code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.85em;
-   background:var(--fondo);padding:1px 5px;border-radius:5px;word-break:break-all}
+
+ /* ── Vista previa del mensaje, como se ve en Instagram ─────────────── */
+ .dm{background:var(--fondo);border-radius:16px;padding:14px;margin-top:12px}
+ .dm .quien{display:flex;align-items:center;gap:8px;color:var(--tinta-suave);
+   font-size:.78rem;margin:0 0 10px}
+ .dm .quien .avatar{width:22px;height:22px;border-radius:50%;
+   background:var(--degradado);flex:0 0 auto}
+ .dm .globo{background:var(--papel);border:1px solid var(--linea);
+   border-radius:18px 18px 18px 5px;padding:11px 14px;font-size:.95rem;
+   white-space:pre-wrap;word-break:break-word;margin-bottom:6px;
+   box-shadow:0 1px 2px rgba(27,21,35,.04)}
+ .dm .boton-dm{background:var(--papel);border:1px solid var(--linea);
+   border-radius:12px;padding:11px;text-align:center;font-weight:800;
+   font-size:.92rem;color:#0095F6}
+
+ /* ── Pasos de la prueba, con hilo de progreso ──────────────────────── */
+ ol.pasos{list-style:none;margin:16px 0 0;padding:0;position:relative}
+ ol.pasos li{display:flex;gap:12px;align-items:flex-start;padding:0 0 16px;
+   position:relative}
+ ol.pasos li:last-child{padding-bottom:0}
+ ol.pasos li::before{content:"";position:absolute;left:11px;top:24px;bottom:0;
+   width:2px;background:var(--linea)}
+ ol.pasos li:last-child::before{display:none}
+ ol.pasos li.hecho::before{background:var(--verde)}
+ ol.pasos .marca{flex:0 0 auto;width:24px;height:24px;border-radius:50%;
+   border:2px solid var(--linea);background:var(--papel);display:flex;
+   align-items:center;justify-content:center;font-size:.78rem;
+   color:var(--tinta-suave);position:relative;z-index:1}
+ ol.pasos li.hecho .marca{background:var(--verde);border-color:var(--verde);
+   color:#fff;font-weight:800}
+ ol.pasos li.hecho .que{font-weight:800}
+ ol.pasos .que{font-size:.96rem;padding-top:1px}
+ ol.pasos .cuando{display:block;color:var(--tinta-suave);font-size:.79rem;
+   font-weight:400}
+ .cuenta-regresiva{color:var(--tinta-suave);font-size:.85rem;margin-top:14px;
+   text-align:center}
+
+ /* ── Periodos ──────────────────────────────────────────────────────── */
+ .periodo{display:flex;gap:6px;margin-top:4px;background:var(--fondo);
+   padding:4px;border-radius:11px}
+ .periodo a{flex:1;text-align:center;padding:8px;border-radius:8px;
+   text-decoration:none;color:var(--tinta-suave);font-size:.85rem;font-weight:700}
+ .periodo a.activo{background:var(--papel);color:var(--tinta);
+   box-shadow:0 1px 3px rgba(27,21,35,.1)}
+
+ code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;
+   background:var(--fondo);border:1px solid var(--linea);padding:1px 6px;
+   border-radius:6px;word-break:break-all;font-weight:700}
  @media (max-width:380px){
    .envoltura{padding:12px 12px 40px}
    .cifras{grid-template-columns:1fr;gap:8px}
-   .cifra{display:flex;align-items:baseline;gap:8px;text-align:left}
-   .cifra b{font-size:1.15rem}
+   .cifra{display:flex;align-items:baseline;gap:10px;text-align:left}
+   .cifra b{font-size:1.35rem}
+   .cifra span{margin-top:0}
+   .estado{font-size:1.18rem}
  }
 `;
+
+
+/**
+ * El logo de InboxPilot, incrustado en el HTML.
+ *
+ * Va inline y no como imagen a proposito: no cuesta una peticion mas, no
+ * parpadea al cargar, y la politica de seguridad del sitio no deja traer nada
+ * de afuera. El degradado morado-rosa-naranja y el avion son los del manual
+ * (brand/logo/inboxpilot-icon.svg).
+ */
+function lockupDeMarca(): string {
+  return `<span class="lockup">
+    <svg width="26" height="26" viewBox="0 0 512 512" aria-hidden="true">
+      <defs><linearGradient id="ip" x1="0%" y1="100%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#833AB4"/>
+        <stop offset="52%" stop-color="#E1306C"/>
+        <stop offset="100%" stop-color="#F77737"/>
+      </linearGradient></defs>
+      <rect width="512" height="512" rx="115" fill="url(#ip)"/>
+      <g transform="translate(256,262) rotate(-32) scale(14.5) translate(-12.5,-12)" fill="#fff">
+        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+      </g>
+    </svg>
+    <span class="nombre">Inbox<span class="pilot">Pilot</span></span>
+  </span>`;
+}
 
 /** Envoltura comun de toda pagina del panel. */
 export function paginaDelPanel(titulo: string, cuerpo: string): string {
@@ -147,12 +237,30 @@ function fecha(d: Date): string {
   }).format(d);
 }
 
+/**
+ * El enlace, legible.
+ *
+ * Uno de Drive real mide 90 caracteres y partido en dos lineas no se lee ni
+ * aporta: al cliente le basta reconocer SU archivo. Se muestra el nombre del
+ * archivo (o el dominio) y el completo queda a un toque de distancia.
+ */
+function enlaceCorto(url: string): string {
+  try {
+    const u = new URL(url);
+    const ultimo = u.pathname.split('/').filter(Boolean).pop();
+    const visible = ultimo && ultimo.length <= 34 ? ultimo : u.hostname.replace(/^www\./, '');
+    return `<code title="${esc(url)}">${esc(visible)}</code>`;
+  } catch {
+    return `<code>${esc(url)}</code>`;
+  }
+}
+
 /** El semaforo. Es lo primero que se ve y responde una sola pregunta. */
 function bloqueConexion(estado: EstadoConexion): string {
   if (estado.tipo === 'activo') {
     const cuenta = estado.cuentaInstagram ? ` en ${esc(estado.cuentaInstagram)}` : '';
     const ultima = estado.ultimaEntrega
-      ? `Última entrega: ${esc(fecha(estado.ultimaEntrega))}.`
+      ? `Última entrega: ${esc(fecha(estado.ultimaEntrega))}`
       : 'Todavía no has entregado nada. En cuanto alguien comente tu palabra, aparece aquí.';
     return `<section class="tarjeta">
       <div class="semaforo">
@@ -202,7 +310,7 @@ function bloqueCampana(campana: DatosDelPanel['campana']): string {
   return `<section class="tarjeta">
     <h2>Tu palabra clave</h2>
     <p class="detalle">Cuando alguien comenta <code>${esc(campana.palabra)}</code>, recibe
-    <code>${esc(campana.enlace)}</code>.</p>
+    ${enlaceCorto(campana.enlace)}.</p>
     <a class="boton suave" href="/panel/campana">Cambiar palabra o enlace</a>
   </section>`;
 }
@@ -248,8 +356,8 @@ function bloqueResultados(datos: DatosDelPanel): string {
     ${periodo}
     <div class="cifras">
       <div class="cifra"><b>${resultados.comentaron}</b><span>comentaron</span></div>
-      <div class="cifra"><b>${resultados.recibieron}</b><span>recibieron</span></div>
-      <div class="cifra"><b>${resultados.noSeguian}</b><span>no te seguían</span></div>
+      <div class="cifra destacada"><b>${resultados.recibieron}</b><span>recibieron tu recurso</span></div>
+      <div class="cifra"><b>${resultados.noSeguian}</b><span>esperando seguirte</span></div>
     </div>
     ${perdidas}
   </section>`;
@@ -268,7 +376,7 @@ export function vistaPreviaDelDm(datos: {
   const cuerpoDeLaEntrega = [datos.mensaje, datos.enlace].filter(Boolean).join('\n');
   const entrega = cuerpoDeLaEntrega ? `<div class="globo">${esc(cuerpoDeLaEntrega)}</div>` : '';
   return `<div class="dm">
-    <p class="quien">Así lo recibe la persona</p>
+    <p class="quien"><span class="avatar"></span>Así lo recibe la persona en su Instagram</p>
     <div class="globo">${esc(datos.bienvenida)}</div>
     <div class="boton-dm">${esc(datos.boton)}</div>
     ${entrega}
@@ -303,7 +411,7 @@ export function renderEditorDeCampana(f: FormularioDeCampana): string {
   return paginaDelPanel(
     'Tu palabra clave',
     `<header class="marca">
-       <span class="nombre">InboxPilot</span>
+       ${lockupDeMarca()}
        <a class="cuenta" href="/panel">Volver</a>
      </header>
      ${f.aviso ? `<div class="aviso">${esc(f.aviso)}</div>` : ''}
@@ -380,7 +488,7 @@ export function renderPruebaEnVivo(datos: {
     return paginaDelPanel(
       'Prueba lista',
       `<header class="marca">
-         <span class="nombre">InboxPilot</span>
+         ${lockupDeMarca()}
          <a class="cuenta" href="/panel">Volver</a>
        </header>
        <section class="tarjeta">
@@ -399,7 +507,7 @@ export function renderPruebaEnVivo(datos: {
     return paginaDelPanel(
       'Esa persona ya lo tenía',
       `<header class="marca">
-         <span class="nombre">InboxPilot</span>
+         ${lockupDeMarca()}
          <a class="cuenta" href="/panel">Volver</a>
        </header>
        <section class="tarjeta">
@@ -416,7 +524,7 @@ export function renderPruebaEnVivo(datos: {
     return paginaDelPanel(
       'La prueba quedó a medias',
       `<header class="marca">
-         <span class="nombre">InboxPilot</span>
+         ${lockupDeMarca()}
          <a class="cuenta" href="/panel">Volver</a>
        </header>
        <section class="tarjeta">
@@ -434,7 +542,7 @@ export function renderPruebaEnVivo(datos: {
     return paginaDelPanel(
       'Se acabó el tiempo de la prueba',
       `<header class="marca">
-         <span class="nombre">InboxPilot</span>
+         ${lockupDeMarca()}
          <a class="cuenta" href="/panel">Volver</a>
        </header>
        <section class="tarjeta">
@@ -457,7 +565,7 @@ export function renderPruebaEnVivo(datos: {
     'Probando en vivo',
     `<meta http-equiv="refresh" content="4">
      <header class="marca">
-       <span class="nombre">InboxPilot</span>
+       ${lockupDeMarca()}
        <a class="cuenta" href="/panel">Volver</a>
      </header>
      <section class="tarjeta">
@@ -480,7 +588,7 @@ export function renderPanel(datos: DatosDelPanel): string {
   return paginaDelPanel(
     'Tu panel',
     `<header class="marca">
-       <span class="nombre">InboxPilot</span>
+       ${lockupDeMarca()}
        ${
          (datos.cuantasCuentas ?? 1) > 1
            ? `<a class="cuenta" href="/panel/cuentas">${esc(datos.cuenta)} · ver todas</a>`
@@ -517,7 +625,7 @@ export function renderCuentasDelOperador(
           ? esc(c.conexion.quePaso)
           : c.conexion.tipo === 'activo'
             ? c.ultimaEntrega
-              ? `Última entrega: ${esc(fecha(c.ultimaEntrega))}.`
+              ? `Última entrega: ${esc(fecha(c.ultimaEntrega))}`
               : 'Activa, sin entregas todavía.'
             : 'Sin poder confirmar.';
       return `<section class="tarjeta">
@@ -541,7 +649,7 @@ export function renderCuentasDelOperador(
   return paginaDelPanel(
     'Cuentas',
     `<header class="marca">
-       <span class="nombre">InboxPilot</span>
+       ${lockupDeMarca()}
        <a class="cuenta" href="/panel">Volver</a>
      </header>
      ${resumen}
@@ -558,7 +666,7 @@ export function mensajeDelPanel(
 ): string {
   return paginaDelPanel(
     titulo,
-    `<header class="marca"><span class="nombre">InboxPilot</span></header>
+    `<header class="marca">${lockupDeMarca()}</header>
      <section class="tarjeta">
        <p class="estado">${esc(encabezado)}</p>
        <p class="detalle">${esc(cuerpo)}</p>

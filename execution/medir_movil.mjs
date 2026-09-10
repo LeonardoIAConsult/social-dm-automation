@@ -17,7 +17,7 @@ import pw from 'file:///C:/Users/Lonardo%20Antonilez/AppData/Roaming/npm/node_mo
 const { chromium } = pw;
 
 const TOKEN = process.argv[2];
-const BASE = 'http://localhost:3117';
+const BASE = process.env.BASE ?? 'http://localhost:3117';
 
 const navegador = await chromium.launch({ channel: 'chrome' });
 const contexto = await navegador.newContext({
