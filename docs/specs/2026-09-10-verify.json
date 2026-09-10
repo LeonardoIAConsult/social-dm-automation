@@ -1,0 +1,58 @@
+{
+  "project": "C:\\Users\\Lonardo Antonilez\\Documents\\social-dm-automation",
+  "harness": {
+    "stack": "Node 18+ · TypeScript estricto · Express · Postgres (pg) · Meta Graph API",
+    "build": "npm run build",
+    "lint": "none",
+    "types": "npm run typecheck",
+    "test": "npm test",
+    "dev": "npm run dev | http://localhost:3000",
+    "health": "http://localhost:3000/health",
+    "smoke": "none",
+    "sensible": "src/server/auth.ts, src/server/panel.ts, src/server/app.ts, src/store/**, src/config/env.ts, src/platforms/instagram/signature.ts, execution/invite.ts"
+  },
+  "startedAt": "2026-09-10T19:13:00.798Z",
+  "steps": [
+    {
+      "step": "build",
+      "cmd": "npm run build",
+      "skipped": false,
+      "ok": true,
+      "code": 0,
+      "ms": 2777,
+      "tail": "> social-dm-automation@0.1.0 build\n> tsc -p tsconfig.json",
+      "lines": 2
+    },
+    {
+      "step": "lint",
+      "cmd": "none",
+      "skipped": true,
+      "ok": true,
+      "code": 0,
+      "ms": 0,
+      "tail": ""
+    },
+    {
+      "step": "types",
+      "cmd": "npm run typecheck",
+      "skipped": false,
+      "ok": true,
+      "code": 0,
+      "ms": 2611,
+      "tail": "> social-dm-automation@0.1.0 typecheck\n> tsc -p tsconfig.json --noEmit",
+      "lines": 2
+    },
+    {
+      "step": "test",
+      "cmd": "npm test",
+      "skipped": false,
+      "ok": true,
+      "code": 0,
+      "ms": 3936,
+      "tail": "[14:13:09] \u001b[32mINFO\u001b[39m (26792): \u001b[36m🧪 [DRY_RUN] envio simulado (no se llama al Graph API)\u001b[39m\n    to: \"ig-user-e2e\"\n    message: {\n      \"kind\": \"private_reply\",\n      \"commentId\": \"COMMENT_REPETIDO\",\n      \"text\": \"¡Hola! Estoy muy feliz de que estés aquí, muchas gracias por tu interés 😊\\n\\nHaz clic abajo y te enviaré el enlace en un momento ✨\",\n      \"buttons\": [\n        {\n          \"title\": \"Obtener el enlace\",\n          \"payload\": \"GET_LINK:default\"\n        }\n      ]\n    }\n✔ si Meta reenvia el MISMO comentario, no se cuenta dos veces (455.6315ms)\n[14:13:09] \u001b[33mWARN\u001b[39m (26792): \u001b[36mFirma invalida, se descarta el webhook\u001b[39m\n    err: \"Firma de webhook invalida\"\n✔ un webhook con firma invalida se descarta y no ensucia el embudo (336.5771ms)\nℹ tests 114\nℹ suites 0\nℹ pass 114\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 2855.4326",
+      "lines": 430
+    }
+  ],
+  "verdict": "GO",
+  "finishedAt": "2026-09-10T19:13:10.124Z"
+}
