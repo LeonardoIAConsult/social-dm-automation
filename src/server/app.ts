@@ -85,6 +85,7 @@ export function createApp(
       panel,
       adapters.get('instagram') as unknown as Parameters<typeof registrarRutasDelPanel>[2],
       new AvisadorUnaVezAlDia(new AvisadorPorLog()),
+      cuentaDeLaBandeja,
     );
   }
 

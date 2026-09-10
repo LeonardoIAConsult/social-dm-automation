@@ -335,12 +335,21 @@ export class InMemoryPanelStore implements PanelStore {
     requireFollow: boolean;
   }): Promise<PanelCampaign> {
     const keywordNormalized = normalize(input.keyword);
-    const clash = await this.campaignByKeyword(input.accountId, input.keyword);
-    if (clash && clash.id !== input.id) {
-      throw new DuplicateKeywordError(input.keyword, clash.id);
+    // Misma regla que en Postgres: sin `id`, guardar una palabra que ya existe
+    // ACTUALIZA esa campana (doble toque de Guardar). Con `id` distinto, choca.
+    const mismaPalabra = await this.campaignByKeyword(input.accountId, input.keyword);
+    if (mismaPalabra && input.id && mismaPalabra.id !== input.id) {
+      throw new DuplicateKeywordError(input.keyword, mismaPalabra.id);
+    }
+    if (input.id) {
+      const yaExiste = this.campaigns.get(input.id);
+      if (yaExiste && yaExiste.accountId !== input.accountId) {
+        // Guardar con el id de una campana de otra cuenta no puede reescribirla.
+        throw new Error('esa campana no es de esta cuenta');
+      }
     }
     const campaign: PanelCampaign = {
-      id: input.id ?? randomUUID(),
+      id: input.id ?? mismaPalabra?.id ?? randomUUID(),
       accountId: input.accountId,
       keyword: input.keyword,
       keywordNormalized,
@@ -711,12 +720,19 @@ export class PostgresPanelStore implements PanelStore {
     requireFollow: boolean;
   }): Promise<PanelCampaign> {
     const keywordNormalized = normalize(input.keyword);
-    const clash = await this.campaignByKeyword(input.accountId, input.keyword);
-    if (clash && clash.id !== input.id) {
-      throw new DuplicateKeywordError(input.keyword, clash.id);
+    const mismaPalabra = await this.campaignByKeyword(input.accountId, input.keyword);
+    // Dos casos distintos que antes se confundian:
+    //  - Sin `id` y ya existe esa palabra = el cliente toco Guardar dos veces, o
+    //    volvio a guardar lo mismo. Se ACTUALIZA esa campana. Acusarlo de un
+    //    choque en su primer guardado era mentirle.
+    //  - Con `id` distinto al que tiene la palabra = de verdad son dos campanas
+    //    peleando por la misma palabra. Ahi si es un choque.
+    if (mismaPalabra && input.id && mismaPalabra.id !== input.id) {
+      throw new DuplicateKeywordError(input.keyword, mismaPalabra.id);
     }
+    const conId = { ...input, id: input.id ?? mismaPalabra?.id };
     try {
-      return await this.insertarCampana(input, keywordNormalized);
+      return await this.insertarCampana(conId, keywordNormalized);
     } catch (err) {
       // Dos guardados simultaneos de la misma palabra pasan los dos el chequeo
       // de arriba y el segundo viola el indice unico. Sin esto sale como un 500
@@ -751,6 +767,8 @@ export class PostgresPanelStore implements PanelStore {
          message            = EXCLUDED.message,
          require_follow     = EXCLUDED.require_follow,
          updated_at         = now()
+       -- Guarda de cuenta: un id ajeno no puede reescribir la campana de otro.
+       WHERE panel_campaigns.account_id = EXCLUDED.account_id
        RETURNING *`,
       [
         input.id ?? randomUUID(),
@@ -826,13 +844,16 @@ export class PostgresPanelStore implements PanelStore {
 
   async eventsSince(accountId: string, sinceMs: number): Promise<FunnelEvent[]> {
     const { rows } = await this.db.query<EventRow>(
+      // Se piden los MAS NUEVOS y despues se revierte: si una cuenta supera la
+      // cota, el cliente tiene que ver lo reciente, no la ventana mas antigua.
+      // (El almacen en memoria hace lo mismo con .slice(-N).)
       `SELECT * FROM panel_events
        WHERE account_id = $1 AND at >= to_timestamp($2::double precision / 1000)
-       ORDER BY at ASC
+       ORDER BY at DESC
        LIMIT $3`,
       [accountId, sinceMs, MAX_EVENTOS_POR_CONSULTA],
     );
-    return rows.map(toEvent);
+    return rows.map(toEvent).reverse();
   }
 }
 

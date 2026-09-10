@@ -82,8 +82,9 @@ export class FuentePanelPrimero implements FuenteDeRecursos {
   }
 
   async buscar(accountId: string, texto: string): Promise<RecursoResuelto | undefined> {
-    if (!(await this.mandaElPanel(accountId))) return this.hoja.buscar(accountId, texto);
-    for (const c of await this.panel.campaignsOf(accountId)) {
+    const suyas = await this.panel.campaignsOf(accountId);
+    if (suyas.length === 0) return this.hoja.buscar(accountId, texto);
+    for (const c of suyas) {
       if (contiene(texto, c.keywordNormalized)) {
         return {
           palabra: c.keyword,
@@ -97,11 +98,15 @@ export class FuentePanelPrimero implements FuenteDeRecursos {
   }
 
   async porPalabra(accountId: string, palabra: string): Promise<RecursoResuelto | undefined> {
-    if (!(await this.mandaElPanel(accountId))) return this.hoja.porPalabra(accountId, palabra);
     const c = await this.panel.campaignByKeyword(accountId, palabra);
-    return c
-      ? { palabra: c.keyword, url: c.url, texto: c.message, exigirSeguir: c.requireFollow }
-      : undefined;
+    if (c) {
+      return { palabra: c.keyword, url: c.url, texto: c.message, exigirSeguir: c.requireFollow };
+    }
+    // Si el panel no conoce esa palabra, se cae a la hoja AUNQUE el panel mande.
+    // El corte de fuente aplica a que palabras NUEVAS hacen match, no a la
+    // entrega de un embudo ya empezado: alguien que comento hace una hora, antes
+    // de que el cliente guardara su primera campana, tiene que recibir lo suyo.
+    return this.hoja.porPalabra(accountId, palabra);
   }
 
   async porDefecto(accountId: string): Promise<RecursoResuelto | undefined> {

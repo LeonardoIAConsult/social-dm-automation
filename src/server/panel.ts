@@ -62,6 +62,11 @@ export function registrarRutasDelPanel(
   adapter?: ConSalud,
   /** Avisa al operador cuando una cuenta deja de responder. */
   avisador: Avisador = avisadorMudo,
+  /**
+   * Unica cuenta que el adaptador sabe consultar. Preguntarle por otra devolveria
+   * el estado de esta, y el cliente veria un verde que no es suyo.
+   */
+  cuentaDelAdaptador?: string,
 ): void {
   // Solo para los formularios del panel. El webhook sigue con su parser propio.
   const formulario = express.urlencoded({ extended: false, limit: '4kb' });
@@ -190,16 +195,23 @@ export function registrarRutasDelPanel(
       if (permiso === 'sin-sesion') return res.status(401).type('html').send(paginaSinSesion());
       if (permiso === 'sin-cuenta') return res.status(404).type('html').send(paginaSinCuenta());
 
-      const cuentas = [];
-      for (const acceso of permiso.todas) {
-        const conexion = await armarEstadoDeConexion(adapter, panel, acceso.accountId);
-        const entrega = await panel.ultimoEvento(acceso.accountId, 'resource_delivered');
-        cuentas.push({
-          accountId: acceso.accountId,
-          conexion,
-          ultimaEntrega: entrega ? new Date(entrega.at) : undefined,
-        });
-      }
+      // En paralelo: en serie, el operador con varias cuentas espera N veces.
+      const cuentas = await Promise.all(
+        permiso.todas.map(async (acceso) => {
+          const conexion = await armarEstadoDeConexion(
+            adapter,
+            panel,
+            acceso.accountId,
+            cuentaDelAdaptador,
+          );
+          const entrega = await panel.ultimoEvento(acceso.accountId, 'resource_delivered');
+          return {
+            accountId: acceso.accountId,
+            conexion,
+            ultimaEntrega: entrega ? new Date(entrega.at) : undefined,
+          };
+        }),
+      );
       return res.type('html').send(renderCuentasDelOperador(cuentas));
     }),
   );
@@ -215,23 +227,34 @@ export function registrarRutasDelPanel(
       if (permiso === 'sin-sesion') return res.status(401).type('html').send(paginaSinSesion());
       if (permiso === 'sin-cuenta') return res.status(404).type('html').send(paginaSinCuenta());
 
-      const desdeCrudo = Number(req.query.desde);
-      // Sin `desde` (o con basura) arranca una ventana nueva ahora mismo.
-      if (!Number.isFinite(desdeCrudo) || desdeCrudo <= 0) {
-        return res.redirect(303, `/panel/prueba?desde=${Date.now()}`);
-      }
-      // Cota: una ventana no puede empezar en el pasado remoto y mostrar
-      // actividad vieja como si fuera de la prueba.
-      const desde = Math.max(desdeCrudo, Date.now() - DURACION_DE_LA_PRUEBA_MS);
+      const ahora = Date.now();
+      const desde = Number(req.query.desde);
+      // La ventana tiene que ser de AHORA: ni del futuro ni mas vieja que su
+      // duracion. Sin esta cota, abrir una URL vieja (o inventar un `desde`) se
+      // apropiaba de la actividad reciente y la pantalla declaraba un exito que
+      // el cliente nunca produjo.
+      const ventanaValida =
+        Number.isInteger(desde) && desde <= ahora && desde > ahora - DURACION_DE_LA_PRUEBA_MS;
+      if (!ventanaValida) return res.redirect(303, `/panel/prueba?desde=${ahora}`);
 
-      const campanas = await panel.campaignsOf(permiso.accountId);
-      const estado = await estadoDeLaPrueba(panel, permiso.accountId, desde);
-      return res.type('html').send(
-        renderPruebaEnVivo({
-          palabra: campanas[0]?.keyword ?? 'tu palabra clave',
-          ...estado,
-        }),
-      );
+      // La palabra que de verdad dispara. Antes se leia solo del panel, asi que a
+      // un cliente que usa la hoja le decia literalmente "comenta tu palabra
+      // clave": una instruccion imposible de seguir.
+      const suyas = await panel.campaignsOf(permiso.accountId);
+      const palabra = suyas[0]?.keyword;
+      if (!palabra) {
+        return res.type('html').send(
+          mensajeDelPanel(
+            'Falta tu palabra clave',
+            'Primero define tu palabra',
+            'Para probar hace falta saber que palabra va a comentar la gente. Definela y vuelve: la prueba toma menos de un minuto.',
+            { texto: 'Definir mi palabra clave', url: '/panel/campana' },
+          ),
+        );
+      }
+
+      const estado = await estadoDeLaPrueba(panel, permiso.accountId, desde, ahora);
+      return res.type('html').send(renderPruebaEnVivo({ palabra, ...estado }));
     }),
   );
 
@@ -267,11 +290,11 @@ export function registrarRutasDelPanel(
       if (permiso === 'sin-cuenta') return res.status(404).type('html').send(paginaSinCuenta());
 
       const cuerpo = (req.body ?? {}) as Record<string, unknown>;
-      const texto = (clave: string, tope: number) =>
-        typeof cuerpo[clave] === 'string' ? (cuerpo[clave] as string).trim().slice(0, tope) : '';
-      const palabra = texto('palabra', 40);
-      const enlace = texto('enlace', 500);
-      const mensaje = texto('mensaje', 280);
+      const texto = (clave: string) =>
+        typeof cuerpo[clave] === 'string' ? (cuerpo[clave] as string).trim() : '';
+      const palabra = texto('palabra');
+      const enlace = texto('enlace');
+      const mensaje = texto('mensaje');
       const exigirSeguir = cuerpo.exigirSeguir === 'si';
       const soloVerPrevia = cuerpo.accion === 'previa';
 
@@ -288,6 +311,31 @@ export function registrarRutasDelPanel(
       // "Ver como queda" no guarda: es para mirar el mensaje antes de decidir.
       if (soloVerPrevia) {
         return res.type('html').send(renderEditorDeCampana(base));
+      }
+
+      // Se RECHAZA lo que no cabe, no se recorta. Recortar en silencio guardaba
+      // un enlace distinto al que el cliente pego y ademas le confirmaba que
+      // quedo activo: el peor error posible, porque no tiene como notarlo.
+      const topes: Array<[string, string, number]> = [
+        ['la palabra', palabra, 40],
+        ['el enlace', enlace, 500],
+        ['el mensaje', mensaje, 280],
+      ];
+      for (const [comoSeLlama, valor, tope] of topes) {
+        if (valor.length > tope) {
+          return res
+            .status(400)
+            .type('html')
+            .send(
+              renderEditorDeCampana({
+                ...base,
+                problema: {
+                  que: `Se paso de largo ${comoSeLlama}.`,
+                  comoArreglarlo: `Dejalo en ${tope} caracteres o menos. Ahora tiene ${valor.length}.`,
+                },
+              }),
+            );
+        }
       }
 
       if (!palabra) {
@@ -336,12 +384,9 @@ export function registrarRutasDelPanel(
         throw err;
       }
 
-      const suave =
-        revision.veredicto === 'no-pudimos-revisar'
-          ? ` Ojo: ${revision.motivo} Guardamos igual, pero ábrelo tú para confirmarlo.`
-          : '';
+      const hayQueRevisarlo = revision.veredicto === 'no-pudimos-revisar';
       logger.info({ account: permiso.accountId }, 'Panel: campana guardada');
-      return res.redirect(303, `/panel?guardado=1${suave ? '&revisar=1' : ''}`);
+      return res.redirect(303, `/panel?guardado=1${hayQueRevisarlo ? '&revisar=1' : ''}`);
     }),
   );
 
@@ -372,7 +417,12 @@ export function registrarRutasDelPanel(
           : 'Guardamos tus cambios. Ya están activos.'
         : undefined;
 
-    const conexion = await armarEstadoDeConexion(adapter, panel, permiso.accountId);
+    const conexion = await armarEstadoDeConexion(
+      adapter,
+      panel,
+      permiso.accountId,
+      cuentaDelAdaptador,
+    );
     if (conexion.tipo === 'atencion') {
       // El cliente no puede reconectar solo: alguien tiene que enterarse HOY.
       await avisador.avisar({

@@ -104,7 +104,10 @@ test('la campana guarda la palabra como la escribio el cliente y la busca normal
   assert.equal((await store.campaignByKeyword('c1', 'guia'))?.id, guardada.id);
 });
 
-test('dos campanas de la misma cuenta no pueden compartir palabra', async () => {
+test('guardar la misma palabra sin id ACTUALIZA: es el doble toque de Guardar', async () => {
+  // REGLA CAMBIADA (auditoria): antes esto lanzaba un choque. En el movil el
+  // guardado tarda, el cliente toca dos veces, y se le acusaba de un duplicado
+  // en su PRIMER guardado. Sin id, la misma palabra es la misma campana.
   const store = nuevo();
   const primera = await store.saveCampaign({
     accountId: 'c1',
@@ -113,9 +116,37 @@ test('dos campanas de la misma cuenta no pueden compartir palabra', async () => 
     requireFollow: true,
   });
 
+  const otraVez = await store.saveCampaign({
+    accountId: 'c1',
+    keyword: 'guía',
+    url: 'https://ejemplo.com/b.pdf',
+    requireFollow: true,
+  });
+
+  assert.equal(otraVez.id, primera.id, 'es la misma campana, actualizada');
+  assert.equal((await store.campaignsOf('c1')).length, 1, 'y no quedan dos');
+});
+
+test('dos campanas DISTINTAS de la misma cuenta no pueden compartir palabra', async () => {
+  const store = nuevo();
+  const primera = await store.saveCampaign({
+    accountId: 'c1',
+    keyword: 'GUIA',
+    url: 'https://ejemplo.com/a.pdf',
+    requireFollow: true,
+  });
+  const otra = await store.saveCampaign({
+    accountId: 'c1',
+    keyword: 'PLANTILLA',
+    url: 'https://ejemplo.com/b.pdf',
+    requireFollow: true,
+  });
+
+  // Renombrar la segunda a la palabra de la primera SI es un choque real.
   await assert.rejects(
     () =>
       store.saveCampaign({
+        id: otra.id,
         accountId: 'c1',
         keyword: 'guía',
         url: 'https://ejemplo.com/b.pdf',

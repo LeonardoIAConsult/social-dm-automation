@@ -1,4 +1,5 @@
 import { logger } from '../utils/logger.js';
+import { esDireccionPublica } from './red.js';
 
 /**
  * Revisa el enlace ANTES de guardarlo.
@@ -63,24 +64,55 @@ function revisarLaForma(enlace: string): RevisionDelEnlace | undefined {
   return undefined;
 }
 
-/** ¿La respuesta nos manda a iniciar sesion? Entonces el archivo es privado. */
-function pideIniciarSesion(respuesta: Response): boolean {
-  const destino = respuesta.url || '';
-  return /accounts\.google\.com|ServiceLogin|\/signin/.test(destino);
+/** ¿Nos mandaron a iniciar sesion? Entonces el archivo es privado. */
+function pideIniciarSesion(respuesta: Response, destinoFinal: URL): boolean {
+  const donde = `${respuesta.url || ''} ${destinoFinal.toString()}`;
+  return /accounts\.google\.com|ServiceLogin|\/signin/.test(donde);
 }
+
+/** Tope de saltos. Mas que esto es una cadena de redirecciones absurda. */
+const MAXIMOS_SALTOS = 5;
 
 export async function revisarEnlace(
   enlace: string,
   traer: typeof fetch = fetch,
+  esPublica = esDireccionPublica,
 ): Promise<RevisionDelEnlace> {
   const problemaDeForma = revisarLaForma(enlace);
   if (problemaDeForma) return problemaDeForma;
 
   const corte = AbortSignal.timeout(TIEMPO_MAXIMO_MS);
   try {
-    const respuesta = await traer(enlace.trim(), { redirect: 'follow', signal: corte });
+    // Las redirecciones se siguen A MANO y cada salto se revisa: un host publico
+    // puede redirigir a la red interna, y seguir redirecciones automaticamente
+    // convierte esta comprobacion en un SSRF.
+    let destino = new URL(enlace.trim());
+    let respuesta: Response | undefined;
 
-    if (pideIniciarSesion(respuesta)) {
+    for (let salto = 0; salto <= MAXIMOS_SALTOS; salto++) {
+      const veredicto = await esPublica(destino);
+      if (!veredicto.permitido) {
+        logger.warn({ host: destino.hostname, motivo: veredicto.motivo }, 'Enlace bloqueado');
+        return {
+          veredicto: 'no-sirve',
+          motivo: 'Ese enlace no apunta a una página pública de internet.',
+          comoArreglarlo: 'Usa la dirección que le darías a un cliente para abrir el archivo.',
+        };
+      }
+
+      respuesta = await traer(destino.toString(), { redirect: 'manual', signal: corte });
+      const siguiente = respuesta.status >= 300 && respuesta.status < 400
+        ? respuesta.headers.get('location')
+        : null;
+      if (!siguiente) break;
+      destino = new URL(siguiente, destino);
+      if (salto === MAXIMOS_SALTOS) {
+        return { veredicto: 'no-pudimos-revisar', motivo: 'El enlace da demasiadas vueltas.' };
+      }
+    }
+    if (!respuesta) return { veredicto: 'no-pudimos-revisar', motivo: 'No hubo respuesta.' };
+
+    if (pideIniciarSesion(respuesta, destino)) {
       return {
         veredicto: 'no-sirve',
         motivo: 'Ese archivo es privado: a quien le llegue le va a pedir iniciar sesión.',

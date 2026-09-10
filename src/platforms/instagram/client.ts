@@ -204,7 +204,9 @@ export class InstagramClient {
       const url = new URL(`${BASE()}/${this.igId}`);
       url.searchParams.set('fields', 'id,username');
       url.searchParams.set('access_token', this.token);
-      const res = await fetch(url, { method: 'GET' });
+      // Con tiempo maximo: sin el, una respuesta colgada de Meta deja la pantalla
+      // del cliente esperando para siempre en vez de decir "estamos revisando".
+      const res = await fetch(url, { method: 'GET', signal: AbortSignal.timeout(4000) });
       // Un 5xx suele venir en HTML: parsear aparte para que reviente aqui y no
       // se confunda con una respuesta de Meta que si dice algo.
       const json = (await res.json()) as { username?: string; error?: ErrorDeMeta };

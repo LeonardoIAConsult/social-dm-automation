@@ -38,10 +38,21 @@ export async function resumenDe(
 ): Promise<Resumen> {
   const porTipo = await personasPorTipo(panel, accountId, ahora - dias * DIA_MS);
   const cuantas = (tipo: FunnelEventType) => porTipo.get(tipo)?.size ?? 0;
+
+  // Quien se freno por no seguir y DESPUES siguio y recibio, no es una perdida:
+  // es una conversion. Contarlo como perdido le haria creer al cliente que dejo
+  // ir gente que en realidad atendio.
+  const recibieron = porTipo.get('resource_delivered') ?? new Set<string>();
+  const frenados = porTipo.get('blocked_not_following') ?? new Set<string>();
+  let siguenEsperando = 0;
+  for (const persona of frenados) {
+    if (!recibieron.has(persona)) siguenEsperando++;
+  }
+
   return {
     comentaron: cuantas('comment_detected'),
-    recibieron: cuantas('resource_delivered'),
-    noSeguian: cuantas('blocked_not_following'),
+    recibieron: recibieron.size,
+    noSeguian: siguenEsperando,
   };
 }
 
@@ -67,8 +78,15 @@ const PASOS: Array<{ tipo: FunnelEventType; nombre: string }> = [
 
 export interface EstadoDeLaPrueba {
   pasos: PasoDeLaPrueba[];
-  /** Se acabo el tiempo sin que pasara nada. */
+  /** Se acabo el tiempo. */
   vencida: boolean;
+  /** Hubo actividad, pero se acabo el tiempo antes de terminar. */
+  incompleta: boolean;
+  /**
+   * La persona de la prueba ya habia recibido el recurso antes, asi que el motor
+   * no se lo vuelve a mandar. No es un fallo: es la proteccion anti-spam.
+   */
+  yaLoTenia: boolean;
   /** Llego hasta el final. */
   completa: boolean;
   /** Alguien no seguia la cuenta y por eso se freno. */
@@ -82,20 +100,40 @@ export async function estadoDeLaPrueba(
   desde: number,
   ahora = Date.now(),
 ): Promise<EstadoDeLaPrueba> {
-  const eventos = await panel.eventsSince(accountId, desde);
-  const primeroDe = (tipo: FunnelEventType) => eventos.find((e) => e.type === tipo);
+  const todos = await panel.eventsSince(accountId, desde);
 
+  // La prueba sigue a UNA persona: la primera que comento dentro de la ventana.
+  // Sin esto, un seguidor real que comente mientras el cliente prueba encenderia
+  // los pasos y la pantalla diria "funciono" aunque al telefono del cliente no
+  // le haya llegado nada.
+  const primerComentario = todos.find((e) => e.type === 'comment_detected');
+  const laPersona = primerComentario?.platformUserId;
+  const eventos = laPersona ? todos.filter((e) => e.platformUserId === laPersona) : todos;
+
+  const primeroDe = (tipo: FunnelEventType) => eventos.find((e) => e.type === tipo);
   const pasos = PASOS.map(({ tipo, nombre }) => {
     const e = primeroDe(tipo);
     return { nombre, hecho: Boolean(e), hora: e ? new Date(e.at) : undefined };
   });
 
+  // Ventana FIJA: empieza en `desde` y dura lo que dura. Antes se recalculaba
+  // contra "ahora", asi que se deslizaba y los pasos ya encendidos se apagaban
+  // solos, y la pantalla acababa negando un comentario que el cliente vio.
   const restante = Math.max(0, desde + DURACION_DE_LA_PRUEBA_MS - ahora);
+  const completa = Boolean(primeroDe('resource_delivered'));
   const huboAlgo = pasos.some((p) => p.hecho);
+
+  // Comento y le mandamos el DM, toco el boton... y no hubo entrega ni bloqueo.
+  // Casi siempre es que esa misma persona ya lo habia recibido antes.
+  const yaLoTenia =
+    Boolean(primeroDe('button_tapped')) && !completa && !primeroDe('blocked_not_following');
+
   return {
     pasos,
-    vencida: restante === 0 && !huboAlgo,
-    completa: Boolean(primeroDe('resource_delivered')),
+    vencida: restante === 0 && !completa,
+    incompleta: restante === 0 && huboAlgo && !completa,
+    yaLoTenia,
+    completa,
     frenadaPorSeguir: Boolean(primeroDe('blocked_not_following')),
     segundosRestantes: Math.ceil(restante / 1000),
   };

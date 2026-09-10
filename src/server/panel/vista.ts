@@ -225,7 +225,10 @@ function bloqueResultados(datos: DatosDelPanel): string {
 
   // Nadie ha comentado todavia: un cero pelado hace pensar que no sirve. Mejor
   // decirle exactamente que hacer, con el texto listo para copiar.
-  if (resultados.comentaron === 0) {
+  // Se entra al estado vacio solo si NO paso nada. Antes bastaba con que no
+  // hubiera comentarios, asi que una cuenta que entrega por DM veia "todavia
+  // nadie ha comentado" con doce entregas hechas.
+  if (resultados.comentaron + resultados.recibieron + resultados.noSeguian === 0) {
     const palabra = datos.campana !== 'pendiente' && datos.campana ? datos.campana.palabra : 'GUIA';
     return `<section class="tarjeta">
       <h2>Tus resultados</h2>
@@ -356,6 +359,8 @@ export function renderPruebaEnVivo(datos: {
   palabra: string;
   pasos: Array<{ nombre: string; hecho: boolean; hora?: Date }>;
   vencida: boolean;
+  incompleta?: boolean;
+  yaLoTenia?: boolean;
   completa: boolean;
   frenadaPorSeguir: boolean;
   segundosRestantes: number;
@@ -384,6 +389,43 @@ export function renderPruebaEnVivo(datos: {
          recurso. Así de simple lo va a vivir la gente.</div>
          <ol class="pasos">${listas}</ol>
          <a class="boton" href="/panel">Volver a mi panel</a>
+       </section>`,
+    );
+  }
+
+  // Hubo actividad pero no llego a la entrega: casi siempre es que esa persona
+  // ya habia recibido el recurso antes y el motor no se lo repite.
+  if (datos.vencida && datos.yaLoTenia) {
+    return paginaDelPanel(
+      'Esa persona ya lo tenía',
+      `<header class="marca">
+         <span class="nombre">InboxPilot</span>
+         <a class="cuenta" href="/panel">Volver</a>
+       </header>
+       <section class="tarjeta">
+         <p class="estado">Todo funcionó, pero esa persona ya lo tenía</p>
+         <p class="detalle">A quien ya recibió tu recurso no se lo volvemos a enviar, para no
+         parecer spam. Prueba con otro teléfono o pídele a alguien más que comente.</p>
+         <ol class="pasos">${listas}</ol>
+         <a class="boton" href="/panel/prueba">Probar con otra cuenta</a>
+       </section>`,
+    );
+  }
+
+  if (datos.vencida && datos.incompleta) {
+    return paginaDelPanel(
+      'La prueba quedó a medias',
+      `<header class="marca">
+         <span class="nombre">InboxPilot</span>
+         <a class="cuenta" href="/panel">Volver</a>
+       </header>
+       <section class="tarjeta">
+         <p class="estado">Quedó a medias</p>
+         <p class="detalle">Empezó bien, pero no llegó hasta el final dentro del tiempo de la
+         prueba. Lo más común es que falte tocar el botón del mensaje.</p>
+         <ol class="pasos">${listas}</ol>
+         <a class="boton" href="/panel/prueba">Probar otra vez</a>
+         <a class="boton suave" href="/panel">Volver a mi panel</a>
        </section>`,
     );
   }
@@ -439,7 +481,11 @@ export function renderPanel(datos: DatosDelPanel): string {
     'Tu panel',
     `<header class="marca">
        <span class="nombre">InboxPilot</span>
-       <span class="cuenta">${esc(datos.cuenta)}</span>
+       ${
+         (datos.cuantasCuentas ?? 1) > 1
+           ? `<a class="cuenta" href="/panel/cuentas">${esc(datos.cuenta)} · ver todas</a>`
+           : `<span class="cuenta">${esc(datos.cuenta)}</span>`
+       }
      </header>
      ${datos.aviso ? `<div class="aviso">${esc(datos.aviso)}</div>` : ''}
      ${bloqueConexion(datos.conexion)}
@@ -468,7 +514,7 @@ export function renderCuentasDelOperador(
       const punto = c.conexion.tipo;
       const dice =
         c.conexion.tipo === 'atencion'
-          ? c.conexion.quePaso
+          ? esc(c.conexion.quePaso)
           : c.conexion.tipo === 'activo'
             ? c.ultimaEntrega
               ? `Última entrega: ${esc(fecha(c.ultimaEntrega))}.`

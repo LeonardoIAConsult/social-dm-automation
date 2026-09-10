@@ -125,6 +125,11 @@ test('saveCampaign busca choque de palabra antes de escribir', async () => {
   assert.deepEqual(calls[0]?.params, ['c1', 'guia'], 'busca por la palabra normalizada');
   assert.match(calls[1]?.sql ?? '', /INSERT INTO panel_campaigns/);
   assert.match(calls[1]?.sql ?? '', /ON CONFLICT \(id\) DO UPDATE/, 'editar no crea otra fila');
+  assert.match(
+    calls[1]?.sql ?? '',
+    /WHERE panel_campaigns\.account_id = EXCLUDED\.account_id/,
+    'un id de otra cuenta no puede reescribir su campana',
+  );
 });
 
 test('deleteCampaign exige la cuenta en el WHERE', async () => {
@@ -140,7 +145,10 @@ test('eventsSince filtra por cuenta y ordena del mas viejo al mas nuevo', async 
 
   const sql = calls[0]?.sql ?? '';
   assert.match(sql, /WHERE account_id = \$1/);
-  assert.match(sql, /ORDER BY at ASC/);
+  // REGLA CAMBIADA (auditoria): se piden los MAS NUEVOS y se revierten. Con
+  // ORDER BY ASC + LIMIT, una cuenta que pasara la cota veia sus dias viejos y
+  // perdia los recientes, o sea sus numeros bajaban sin que nada cambiara.
+  assert.match(sql, /ORDER BY at DESC/);
   assert.match(sql, /LIMIT \$3/, 'sin cota, la pantalla de resultados se traeria la tabla entera');
   assert.equal(calls[0]?.params?.[0], 'c1');
   assert.equal(calls[0]?.params?.[1], 1_000_000);

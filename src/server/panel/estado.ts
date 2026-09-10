@@ -21,11 +21,21 @@ export async function armarEstadoDeConexion(
   adapter: ConSalud | undefined,
   panel: PanelStore,
   accountId: string,
+  /**
+   * Cuenta que el adaptador sabe consultar. Hoy el adaptador usa el token de UNA
+   * cuenta: preguntarle por otra devolveria el estado de la primera, y el cliente
+   * veria un verde que no es suyo. Si no coincide, se dice "no sabemos".
+   */
+  cuentaDelAdaptador?: string,
 ): Promise<EstadoConexion> {
   const entrega = await panel.ultimoEvento(accountId, 'resource_delivered');
   const ultimaEntrega = entrega ? new Date(entrega.at) : undefined;
 
   if (!adapter?.salud) return { tipo: 'sin-datos' };
+  if (cuentaDelAdaptador !== undefined && cuentaDelAdaptador !== accountId) {
+    // Mostrar el estado de otra cuenta seria mentirle al cliente. Mejor callar.
+    return { tipo: 'sin-datos' };
+  }
 
   let salud: Awaited<ReturnType<NonNullable<ConSalud['salud']>>>;
   try {

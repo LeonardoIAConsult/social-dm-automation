@@ -361,10 +361,16 @@ export class FlowEngine {
     state: ConversationState,
     campaign: Campaign,
   ): Promise<void> {
-    // Si la campana viene del panel, manda lo que el cliente eligio ahi; si no,
-    // lo que dice la campana del codigo. El interruptor global sigue por encima.
-    const exigeLaCampana =
-      typeof state.data.exigirSeguir === 'boolean' ? state.data.exigirSeguir : campaign.requireFollow;
+    // Se RELEE la campana ahora, no se confia en lo que se guardo cuando llego el
+    // comentario: entre ese momento y este toque pueden pasar horas, y si el
+    // cliente encendio el follow-gate en el medio, la bandera vieja lo saltaria.
+    const cuenta = state.accountId ?? this.accountId;
+    const palabra =
+      typeof state.data.matchedKeyword === 'string' ? state.data.matchedKeyword : undefined;
+    const alDia = palabra ? await this.recursos.porPalabra(cuenta, palabra) : undefined;
+    const guardado =
+      typeof state.data.exigirSeguir === 'boolean' ? state.data.exigirSeguir : undefined;
+    const exigeLaCampana = alDia?.exigirSeguir ?? guardado ?? campaign.requireFollow;
     const gateOn = env.FOLLOW_GATE_ENABLED && exigeLaCampana;
 
     if (gateOn) {

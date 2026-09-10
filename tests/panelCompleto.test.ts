@@ -297,6 +297,13 @@ test('la prueba en vivo abre una ventana y se refresca sola', async () => {
   const { panel, server, port } = montar('ok');
   try {
     const cookie = await entrar(port, panel, CUENTA);
+    // Sin palabra definida no hay prueba posible: es lo que se comenta.
+    await panel.saveCampaign({
+      accountId: CUENTA,
+      keyword: 'PLANTILLA',
+      url: 'https://ejemplo.com/p.pdf',
+      requireFollow: true,
+    });
 
     const arranque = await fetch(url(port, '/panel/prueba'), {
       headers: { cookie },
