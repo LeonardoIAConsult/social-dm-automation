@@ -20,9 +20,12 @@ enlace, corre la prueba en vivo y cambia su palabra clave sin llamar a nadie.
 
 ## Estado operativo
 
-Los bloqueos externos vigentes, las fechas límite de infraestructura y el
-registro de avance con su evidencia viven en `private/` (fuera del repo
-público): `private/estado-operativo.md` y `private/ledger-panel-cliente.md`.
+**Al retomar este proyecto, leer primero `private/estado-operativo.md`**: su
+primera sección (`⏭️ PENDIENTES`) es la lista de tareas abiertas con su fecha
+límite y su criterio de hecho. Ahí están también los bloqueos externos vigentes
+y las fechas de caducidad de la infraestructura. El registro de avance con su
+evidencia vive en `private/ledger-panel-cliente.md`. Ninguno de los dos va al
+repo público.
 
 ## Verificación (harness) — lo lee `Verify_After_Changes_LAP` v2
 

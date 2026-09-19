@@ -16,6 +16,10 @@ const ACTION_VERBS =
 const STOPWORDS = new Set([
   'LA', 'EL', 'LOS', 'LAS', 'UN', 'UNA', 'DE', 'EN', 'Y', 'O', 'PALABRA', 'ABAJO',
   'AQUI', 'AQUÍ', 'THE', 'WORD', 'BELOW', 'DM', 'LINK', 'BIO',
+  // 'CTA' aparece en las hojas de planeacion como etiqueta de la columna o del
+  // renglon ("CTA a Telegram en descripcion"), nunca como palabra a comentar.
+  // Sin esto, once filas de la hoja de Leonardo registraban la palabra "cta".
+  'CTA',
 ]);
 
 function clean(token: string): string {

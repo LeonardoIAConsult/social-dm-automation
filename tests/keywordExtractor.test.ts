@@ -34,3 +34,8 @@ test('caption vacío devuelve null', () => {
   assert.equal(extractKeywordFromCaption(''), null);
   assert.equal(extractKeywordFromCaption(null), null);
 });
+
+test('CTA no es una palabra clave: es la etiqueta de la columna de la hoja', () => {
+  assert.equal(extractKeywordFromCaption('CTA a Telegram en descripción'), null);
+  assert.equal(extractKeywordFromCaption('CTA: Escribeme por mensaje'), null);
+});

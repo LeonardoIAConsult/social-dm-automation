@@ -15,6 +15,8 @@ import {
 } from './panel/vista.js';
 import { revisarEnlace } from '../core/enlaces.js';
 import { armarEstadoDeConexion, type ConSalud } from './panel/estado.js';
+import { conCache } from './panel/saludCacheada.js';
+import { TopeDePeticiones, quienPide } from './panel/proteccion.js';
 import {
   DURACION_DE_LA_PRUEBA_MS,
   estadoDeLaPrueba,
@@ -71,6 +73,26 @@ export function registrarRutasDelPanel(
   // Solo para los formularios del panel. El webhook sigue con su parser propio.
   const formulario = express.urlencoded({ extended: false, limit: '4kb' });
 
+  // La consulta a Meta se cachea: su limite es por APLICACION, compartido entre
+  // todos los clientes, y el panel la dispara en cada visita.
+  const salud = conCache(adapter);
+
+  // Topes. El de la entrada va por IP porque todavia no hay sesion.
+  const topeDeEntrada = new TopeDePeticiones(20, 60_000);
+
+  const seMePaso = (res: Response) =>
+    res
+      .status(429)
+      .type('html')
+      .send(
+        mensajeDelPanel(
+          'Vamos muy rápido',
+          'Vamos muy rápido',
+          'Estás abriendo esta pantalla muchas veces seguidas. Espera un momento y vuelve a intentarlo.',
+          { texto: 'Volver a mi panel', url: '/panel' },
+        ),
+      );
+
   /**
    * Paso 1: mirar el enlace. NO consume la invitacion, solo muestra el boton.
    * Que un crawler abra esto no le cuesta nada al cliente.
@@ -100,6 +122,7 @@ export function registrarRutasDelPanel(
     '/panel/entrar',
     formulario,
     asincrono(async (req: Request, res: Response) => {
+    if (!topeDeEntrada.permite(quienPide(req))) return seMePaso(res);
     const cuerpo = req.body as Record<string, unknown> | undefined;
     const token = typeof cuerpo?.t === 'string' ? cuerpo.t : '';
     if (!token) return res.status(400).type('html').send(paginaEnlaceInvalido());
@@ -199,7 +222,7 @@ export function registrarRutasDelPanel(
       const cuentas = await Promise.all(
         permiso.todas.map(async (acceso) => {
           const conexion = await armarEstadoDeConexion(
-            adapter,
+            salud,
             panel,
             acceso.accountId,
             cuentaDelAdaptador,
@@ -418,7 +441,7 @@ export function registrarRutasDelPanel(
         : undefined;
 
     const conexion = await armarEstadoDeConexion(
-      adapter,
+      salud,
       panel,
       permiso.accountId,
       cuentaDelAdaptador,

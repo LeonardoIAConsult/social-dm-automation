@@ -109,6 +109,14 @@ const recienCreada = await panel.createInvite({
   ttlMs: 8 * hora,
   label: 'Demo primer dia',
 });
+// Uno aparte para las herramientas (medir_movil, capturas). Sin este, medir
+// quemaba el enlace del cliente, porque cada invitacion sirve UNA sola vez.
+const paraHerramientas = await panel.createInvite({
+  accountId: CON_ACTIVIDAD,
+  role: 'owner',
+  ttlMs: 8 * hora,
+  label: 'Uso de herramientas',
+});
 
 createApp(engine, adapters, store, panel, CON_ACTIVIDAD).listen(PUERTO, () => {
   const base = `http://localhost:${PUERTO}`;
@@ -119,6 +127,9 @@ createApp(engine, adapters, store, panel, CON_ACTIVIDAD).listen(PUERTO, () => {
   console.log(`  ${base}/panel/entrar?t=${conActividad.token}\n`);
   console.log('  Cuenta RECIÉN creada (así se ve el primer día):');
   console.log(`  ${base}/panel/entrar?t=${recienCreada.token}\n`);
-  console.log('  Cada enlace sirve UNA vez: si lo recargas, reinicia esto.');
+  console.log(`  Para herramientas (medir, capturas), NO lo uses tu:`);
+  console.log(`  ${base}/panel/entrar?t=${paraHerramientas.token}
+`);
+  console.log('  Cada enlace sirve UNA vez: si lo gastas, reinicia esto.');
   console.log('  Para cerrar: Ctrl+C\n');
 });
