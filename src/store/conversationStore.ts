@@ -218,6 +218,25 @@ export class PostgresConversationStore implements ConversationStore {
   }
 }
 
+/**
+ * Tope de mensajes guardados por conversacion (bandeja /inbox). Evita que el
+ * historial crezca sin techo: con el store en disco, cada upsert reescribe el
+ * archivo completo, asi que un historial ilimitado degrada disco + latencia.
+ *
+ * Vive aqui y no en el engine porque ya hay dos escritores del hilo: el engine
+ * (respuestas automaticas) y la respuesta manual del operador desde la bandeja.
+ * Dos topes separados es un tope que alguien olvida subir.
+ */
+export const MAX_MESSAGES = 50;
+
+/** Agrega un mensaje al hilo y poda al tope (conserva los mas recientes). */
+export function agregarMensaje(state: ConversationState, msg: ConversationMessage): void {
+  state.messages.push(msg);
+  if (state.messages.length > MAX_MESSAGES) {
+    state.messages.splice(0, state.messages.length - MAX_MESSAGES);
+  }
+}
+
 /** Ventana de mensajeria estandar de Meta: 24h desde la ultima interaccion del usuario. */
 export const MESSAGING_WINDOW_MS = 24 * 60 * 60 * 1000;
 

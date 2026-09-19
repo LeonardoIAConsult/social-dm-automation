@@ -3,6 +3,7 @@ import { logger } from '../utils/logger.js';
 import { noopFunnelRecorder, type FunnelRecorder } from './funnel.js';
 import type { FunnelEventType } from '../store/panelStore.js';
 import {
+  agregarMensaje,
   isWithinMessagingWindow,
   type ConversationMessage,
   type ConversationState,
@@ -35,13 +36,6 @@ const CHECK_PREFIX = 'CHECK_FOLLOW:';
 
 /** Cuanto confiar en el cache de follow antes de re-consultar la API. */
 const FOLLOW_CACHE_TTL_MS = 60 * 1000;
-
-/**
- * Tope de mensajes guardados por conversacion (bandeja /inbox). Evita que el
- * historial crezca sin techo: con el store en disco, cada upsert reescribe el
- * archivo completo, asi que un historial ilimitado degrada disco + latencia.
- */
-const MAX_MESSAGES = 50;
 
 /** Dia en formato AAAA-MM-DD, para acotar por dia las claves de dedup. */
 function hoy(): string {
@@ -579,13 +573,11 @@ export class FlowEngine {
 
   /**
    * Agrega un mensaje al hilo y poda al tope (conserva los mas recientes).
-   * Punto unico para que entrante y saliente respeten el limite.
+   * El tope vive en el store: la respuesta manual del operador escribe el mismo
+   * hilo y tiene que respetar exactamente el mismo limite.
    */
   private recordMessage(state: ConversationState, msg: ConversationMessage): void {
-    state.messages.push(msg);
-    if (state.messages.length > MAX_MESSAGES) {
-      state.messages.splice(0, state.messages.length - MAX_MESSAGES);
-    }
+    agregarMensaje(state, msg);
   }
 
   private async loadState(event: IncomingEvent, cuenta: string): Promise<ConversationState> {

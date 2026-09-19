@@ -2,7 +2,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { InMemoryConversationStore } from '../src/store/conversationStore.js';
 import { FlowEngine } from '../src/core/flowEngine.js';
-import { renderInboxHtml, basicAuthOk } from '../src/server/inbox.js';
+import {
+  renderInboxHtml,
+  renderReplyHtml,
+  basicAuthOk,
+  tokenDeOrigenDeLaBandeja,
+  origenDeLaBandejaValido,
+  VENTANA_DEL_TOKEN_MS,
+  type OpcionesDeBandeja,
+} from '../src/server/inbox.js';
 import { campaigns } from '../src/core/campaigns.js';
 import type { PlatformAdapter, OutgoingMessage } from '../src/core/types.js';
 
@@ -25,6 +33,15 @@ function fakeAdapter(sent: OutgoingMessage[]): PlatformAdapter {
     async isFollower() {
       return true;
     },
+  };
+}
+
+
+/** Opciones minimas de la vista: la cuenta que envia y el campo de origen. */
+function opciones(): OpcionesDeBandeja {
+  return {
+    cuenta: { id: '17841400000000001', username: 'emprende_al_exito', conectada: true },
+    pass: 'clave',
   };
 }
 
@@ -132,19 +149,22 @@ test('doble tap concurrente entrega una sola vez (no DM duplicado)', async () =>
 
 test('renderInboxHtml muestra usuario, inbound y outbound en ingles, y escapa HTML', () => {
   const now = Date.now();
-  const html = renderInboxHtml([
-    {
-      platform: 'instagram',
-      userId: 'U1',
-      username: 'juan',
-      lastUserInteractionAt: now,
-      data: {},
-      messages: [
-        { dir: 'in', kind: 'comment', text: 'quiero la GUIA <b>hola</b>', at: now },
-        { dir: 'out', kind: 'private_reply', text: 'Here is your link', at: now },
-      ],
-    },
-  ]);
+  const html = renderInboxHtml(
+    [
+      {
+        platform: 'instagram',
+        userId: 'U1',
+        username: 'juan',
+        lastUserInteractionAt: now,
+        data: {},
+        messages: [
+          { dir: 'in', kind: 'comment', text: 'quiero la GUIA <b>hola</b>', at: now },
+          { dir: 'out', kind: 'private_reply', text: 'Here is your link', at: now },
+        ],
+      },
+    ],
+    opciones(),
+  );
   assert.match(html, /juan/);
   assert.match(html, /quiero la GUIA/);
   assert.match(html, /Here is your link/);
@@ -163,4 +183,102 @@ test('basicAuthOk: acepta credenciales correctas y rechaza el resto', () => {
   assert.equal(basicAuthOk('Bearer xyz', U, P), false, 'esquema no Basic');
   assert.equal(basicAuthOk(basic(U, P), '', ''), false, 'sin config -> nunca autoriza');
   assert.equal(basicAuthOk('Basic @@notbase64@@', U, P), false, 'header malformado');
+});
+
+test('la bandeja ofrece responder con la ventana abierta y la cierra a las 24h', () => {
+  const ahora = Date.now();
+  const base = {
+    platform: 'instagram' as const,
+    userId: 'U1',
+    username: 'juan',
+    data: {},
+    messages: [{ dir: 'in' as const, kind: 'message', text: 'hola', at: ahora }],
+  };
+
+  const abierta = renderInboxHtml([{ ...base, lastUserInteractionAt: ahora }], opciones());
+  assert.match(abierta, /\/inbox\/reply\?user=U1/, 'con la ventana abierta, deja responder');
+
+  const cerrada = renderInboxHtml(
+    [{ ...base, lastUserInteractionAt: ahora - 25 * 60 * 60 * 1000 }],
+    opciones(),
+  );
+  assert.doesNotMatch(cerrada, /\/inbox\/reply\?user=U1/, 'pasadas 24h, no ofrece responder');
+  assert.match(cerrada, /24-hour/, 'y explica por que, en ingles');
+});
+
+test('renderReplyHtml: formulario con la cuenta a la vista; sin ventana, sin formulario', () => {
+  const ahora = Date.now();
+  const base = {
+    platform: 'instagram' as const,
+    userId: 'U1',
+    username: 'juan',
+    data: {},
+    messages: [{ dir: 'in' as const, kind: 'message', text: 'thanks!', at: ahora }],
+  };
+
+  const html = renderReplyHtml({ ...base, lastUserInteractionAt: ahora }, opciones());
+  assert.match(html, /action="\/inbox\/send"/);
+  assert.match(html, /name="origen"/);
+  assert.match(html, /@emprende_al_exito/, 'el activo que envia, visible en la misma pantalla');
+  assert.match(html, /17841400000000001/, 'y su ID');
+
+  const sinVentana = renderReplyHtml(
+    { ...base, lastUserInteractionAt: ahora - 25 * 60 * 60 * 1000 },
+    opciones(),
+  );
+  assert.doesNotMatch(sinVentana, /action="\/inbox\/send"/, 'fuera de la ventana no hay boton');
+});
+
+test('el token de origen esta atado a la credencial Y a la conversacion', () => {
+  const t = tokenDeOrigenDeLaBandeja('clave', 'U1');
+  assert.equal(origenDeLaBandejaValido('clave', 'U1', t), true);
+  assert.equal(origenDeLaBandejaValido('otra-clave', 'U1', t), false, 'otra credencial no vale');
+  assert.equal(
+    origenDeLaBandejaValido('clave', 'U2', t),
+    false,
+    'el token de una conversacion no sirve para otra',
+  );
+  assert.equal(origenDeLaBandejaValido('clave', 'U1', 'inventado'), false);
+  assert.equal(origenDeLaBandejaValido('clave', 'U1', ''), false);
+  assert.equal(origenDeLaBandejaValido('clave', 'U1', undefined), false);
+  assert.equal(origenDeLaBandejaValido('', 'U1', t), false, 'sin credencial configurada, nunca');
+  assert.equal(origenDeLaBandejaValido('clave', '', t), false, 'sin conversacion, nunca');
+});
+
+test('el token de origen caduca: vale la franja actual y la anterior, no una vieja', () => {
+  const ahora = Date.now();
+  const deAhora = tokenDeOrigenDeLaBandeja('clave', 'U1', ahora);
+  const media = VENTANA_DEL_TOKEN_MS;
+
+  assert.equal(
+    origenDeLaBandejaValido('clave', 'U1', deAhora, ahora + media),
+    true,
+    'un formulario abierto hace un rato todavia se puede enviar',
+  );
+  assert.equal(
+    origenDeLaBandejaValido('clave', 'U1', deAhora, ahora + 3 * media),
+    false,
+    'un token guardado de una pagina vieja NO vale para siempre',
+  );
+});
+
+test('el auto-refresco de la lista apunta a /inbox limpio (el aviso no se repite)', () => {
+  const ahora = Date.now();
+  const html = renderInboxHtml(
+    [
+      {
+        platform: 'instagram',
+        userId: 'U1',
+        lastUserInteractionAt: ahora,
+        data: {},
+        messages: [],
+      },
+    ],
+    { ...opciones(), aviso: { tipo: 'ok', texto: 'Message accepted' } },
+  );
+  assert.match(
+    html,
+    /http-equiv="refresh" content="5;url=\/inbox"/,
+    'sin destino, el refresco repetiria la URL con ?sent=ok y el aviso quedaria clavado',
+  );
 });
