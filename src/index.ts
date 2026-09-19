@@ -132,6 +132,11 @@ async function main(): Promise<void> {
   app.listen(env.PORT, () => {
     logger.info(`🚀 Servidor escuchando en http://localhost:${env.PORT}`);
     logger.info(`   Webhook: POST /webhooks/instagram`);
+    // El modo se imprime porque es lo primero que hay que saber de un servidor
+    // en marcha y lo unico que no se puede deducir desde fuera: en SIMULACION
+    // la app responde "enviado" y a Instagram no llega nada. Eso arruino una
+    // grabacion de App Review antes de que existiera esta linea.
+    logger.info(`   Modo de envio: ${env.DRY_RUN ? 'SIMULACION (no sale nada a Meta)' : 'REAL'}`);
     logger.info(`   Follow-gate: ${env.FOLLOW_GATE_ENABLED ? 'ON' : 'OFF'}`);
     logger.info(
       `   Estado: ${env.STORE_BACKEND}${env.STORE_BACKEND === 'file' ? ` (${env.STORE_FILE_PATH})` : ''}`,
