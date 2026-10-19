@@ -26,3 +26,13 @@ jobs:
       - run: npm test
         env:
           DRY_RUN: 'true'
+
+  # La imagen Docker no la construye nadie mas (Render usa runtime: node), asi que se pudria sin
+  # aviso: el 19-oct dejo de construir al sumar el candado de superficie de copia al build. Solo se
+  # construye, no se publica.
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t inboxpilot-ci .
