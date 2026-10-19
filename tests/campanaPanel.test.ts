@@ -244,6 +244,9 @@ test('guardar una campana valida la deja activa y lo dice', async () => {
     });
 
     assert.equal(res.status, 303);
+    // Sin "&revisar=1": el enlace se reviso y sirve. Si la revision fallara, la ruta guarda igual
+    // (falla abierto) y el 303 solo no lo distinguiria (REVISOR 2026-10-19).
+    assert.equal(res.headers.get('location'), '/panel?guardado=1');
     const guardadas = await panel.campaignsOf(CUENTA);
     assert.equal(guardadas.length, 1);
     assert.equal(guardadas[0]?.keyword, 'PLANTILLA');
