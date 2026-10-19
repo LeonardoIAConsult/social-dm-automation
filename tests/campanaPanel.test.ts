@@ -30,6 +30,7 @@ const { InMemoryPanelStore } = await import('../src/store/panelStore.js');
 const { InstagramAdapter } = await import('../src/platforms/instagram/instagramAdapter.js');
 const { SESSION_COOKIE } = await import('../src/server/auth.js');
 const { revisarEnlace } = await import('../src/core/enlaces.js');
+const { esDireccionPublica } = await import('../src/core/red.js');
 
 const CUENTA = 'tienda-de-marcela';
 const USUARIO = 'ig-persona';
@@ -60,7 +61,14 @@ function montar() {
     undefined,
     new FuentePanelPrimero(panel),
   );
-  const server = createApp(engine, adapters, store, panel).listen(0);
+  // Sin red (CLAUDE.md): el revisor REAL (forma del enlace, guarda anti-SSRF, saltos) con
+  // solo la red fingida: DNS a una IP publica y una respuesta 200. Antes salia a ejemplo.com
+  // de verdad y la prueba se rompio el dia que ese dominio ajeno empezo a dar 404.
+  const fetch200 = (async (destino: string | URL | Request) =>
+    ({ status: 200, url: String(destino) }) as Response) as typeof fetch;
+  const dnsPublico = (u: URL) => esDireccionPublica(u, async () => [{ address: '93.184.216.34' }]);
+  const sinRed = (enlace: string) => revisarEnlace(enlace, fetch200, dnsPublico);
+  const server = createApp(engine, adapters, store, panel, undefined, sinRed).listen(0);
   return { panel, store, engine, enviados, server, port: (server.address() as AddressInfo).port };
 }
 

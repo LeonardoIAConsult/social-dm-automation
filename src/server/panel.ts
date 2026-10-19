@@ -69,6 +69,12 @@ export function registrarRutasDelPanel(
    * el estado de esta, y el cliente veria un verde que no es suyo.
    */
   cuentaDelAdaptador?: string,
+  /**
+   * Revisa el enlace antes de guardar la campana. Sale a la red (DNS + fetch), asi que
+   * las pruebas inyectan uno falso: antes iban a ejemplo.com de verdad y se rompieron
+   * el dia que ese dominio ajeno empezo a dar 404.
+   */
+  revisar: typeof revisarEnlace = revisarEnlace,
 ): void {
   // Solo para los formularios del panel. El webhook sigue con su parser propio.
   const formulario = express.urlencoded({ extended: false, limit: '4kb' });
@@ -373,7 +379,7 @@ export function registrarRutasDelPanel(
         );
       }
 
-      const revision = await revisarEnlace(enlace);
+      const revision = await revisar(enlace);
       if (revision.veredicto === 'no-sirve') {
         return res.status(400).type('html').send(
           renderEditorDeCampana({

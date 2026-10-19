@@ -55,6 +55,8 @@ export function createApp(
    * el panel, con autorizacion de verdad (Tarea 12).
    */
   cuentaDeLaBandeja: string = DEFAULT_ACCOUNT_ID,
+  /** Revisor de enlaces del editor de campanas; las pruebas pasan uno sin red. */
+  revisarEnlaceDeCampana?: Parameters<typeof registrarRutasDelPanel>[5],
 ): Express {
   const app = express();
 
@@ -98,6 +100,7 @@ export function createApp(
       adapters.get('instagram') as unknown as Parameters<typeof registrarRutasDelPanel>[2],
       new AvisadorUnaVezAlDia(new AvisadorPorLog()),
       cuentaDeLaBandeja,
+      revisarEnlaceDeCampana,
     );
   }
 
