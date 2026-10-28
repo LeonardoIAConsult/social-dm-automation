@@ -1,5 +1,5 @@
 # Build de produccion en dos etapas.
-FROM node:20-alpine AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 # `npm run build` termina con el candado de superficie de copia (Sentinel #34), que es Python y
 # vive en scripts/security/. Solo en esta etapa: la imagen final no lleva ni Python ni el candado.
@@ -11,7 +11,7 @@ COPY src ./src
 COPY scripts ./scripts
 RUN npm run build
 
-FROM node:20-alpine
+FROM node:24-alpine
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package*.json ./

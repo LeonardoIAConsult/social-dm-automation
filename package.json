@@ -4,7 +4,7 @@
   "description": "Motor de automatizacion de DMs para redes sociales. Conecta directo a la API de Meta (Instagram) sin intermediarios. Flujos disparados por el usuario (comment-to-DM, DM entrante, story reply) con follow-gate para entregar valor solo a quienes te siguen. Arquitectura de adaptadores extensible a Facebook y otras redes.",
   "type": "module",
   "engines": {
-    "node": ">=18.17"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
